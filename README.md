@@ -3,6 +3,7 @@
 Лёгкая асинхронная библиотека для работы с API маркетплейса [Playerok](https://playerok.com).
 
 [![CI](https://github.com/th1ks/PlayerokAPI/actions/workflows/ci.yml/badge.svg)](https://github.com/th1ks/PlayerokAPI/actions/workflows/ci.yml)
+[![Docs](https://app.readthedocs.org/projects/playerokapi/badge/?version=latest)](https://playerokapi.readthedocs.io)
 [![PyPI](https://img.shields.io/pypi/v/PlayerokAPI.svg)](https://pypi.org/project/PlayerokAPI/)
 [![Python](https://img.shields.io/pypi/pyversions/PlayerokAPI.svg)](https://pypi.org/project/PlayerokAPI/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
@@ -171,6 +172,17 @@ except PlayerokError:
 
 Сетевые сбои, `429` и `5xx` на идемпотентных методах повторяются автоматически.
 `POST` после `5xx` не повторяется — чтобы не создать вторую покупку.
+
+## Документация
+
+Полное руководство и справочник API — [playerokapi.readthedocs.io](https://playerokapi.readthedocs.io).
+
+Собрать локально:
+
+```bash
+pip install -e ".[docs]"
+sphinx-build -b html docs docs/_build/html
+```
 
 ## Примеры
 

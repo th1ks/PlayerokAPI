@@ -40,6 +40,18 @@ jobs:
       - run: pip install -e ".[dev]"
       - run: pytest -q
 
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -e ".[docs]"
+      # -W: предупреждение Sphinx ломает сборку, как и на Read the Docs.
+      - run: sphinx-build -b html -W --keep-going docs docs/_build/html
+
   build:
     runs-on: ubuntu-latest
     needs: [lint, test]

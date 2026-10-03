@@ -19,8 +19,26 @@ class OtpResult:
 
     token: str | None = field(default=None, repr=False)
     requires_two_factor: bool = False
-    second_factor_session: dict[str, Any] | None = field(default=None, repr=False)
+    #: Сессия второго фактора как её отдал сервер: строка либо объект.
+    second_factor_session: Any = field(default=None, repr=False)
     raw: dict[str, Any] = field(default_factory=dict, repr=False)
+
+    @property
+    def second_factor_token(self) -> str | None:
+        """Токен сессии 2FA для `confirm_second_factor`.
+
+        Форму поля площадка не документирует, поэтому поддержаны оба
+        варианта: голая строка и объект с токеном внутри.
+        """
+        session = self.second_factor_session
+        if isinstance(session, str):
+            return session or None
+        if isinstance(session, dict):
+            for key in ("token", "sessionToken", "secondFactorSession", "id"):
+                value = session.get(key)
+                if isinstance(value, str) and value:
+                    return value
+        return None
 
 
 class AuthMethods:
@@ -40,18 +58,28 @@ class AuthMethods:
         if not isinstance(payload, dict):
             raise PlayerokError("Неожиданный ответ подтверждения OTP")
         if payload.get("requiresTwoFactor"):
-            session = payload.get("secondFactorSession")
-            if not isinstance(session, dict):
+            result = OtpResult(
+                requires_two_factor=True,
+                second_factor_session=payload.get("secondFactorSession"),
+                raw=payload,
+            )
+            if result.second_factor_token is None:
                 raise PlayerokError("Сервер не вернул сессию второго фактора")
-            return OtpResult(requires_two_factor=True, second_factor_session=session, raw=payload)
+            return result
         token = self._save_token(payload, cookie_token)
         return OtpResult(token=token, raw=payload)
 
-    async def confirm_second_factor(self, session_token: str, code: str) -> str:
-        """Завершить вход по шестизначному коду 2FA."""
+    async def confirm_second_factor(self, session: str | OtpResult, code: str) -> str:
+        """Завершить вход по шестизначному коду 2FA.
+
+        Принимает и сам токен сессии, и результат `confirm_otp` целиком.
+        """
+        token = session.second_factor_token if isinstance(session, OtpResult) else session
+        if not token:
+            raise ValueError("Нужен токен сессии второго фактора")
         payload, cookie_token = await self._post_for_token(
             "/auth/confirm-second-factor",
-            {"token": session_token, "totpCode": code},
+            {"token": token, "totpCode": code},
         )
         return self._save_token(payload, cookie_token)
 

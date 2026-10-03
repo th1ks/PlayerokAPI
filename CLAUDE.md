@@ -16,8 +16,13 @@
 ## Файлы
 
 Не плодить бюрократию: никаких `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`,
-`CHANGELOG.md`, шаблонов issue и PR, развесистых `docs/`. Только то, что реально нужно:
+`CHANGELOG.md`, шаблонов issue и PR. Только то, что реально нужно:
 код, `README.md`, `LICENSE`, `pyproject.toml`, CI.
+
+`docs/` — это документация Read the Docs, её не трогать. Sphinx с autodoc,
+тема furo, прозаические страницы на Markdown через MyST. Собирается с `-W`:
+предупреждение ломает сборку и локально, и в CI, и на Read the Docs.
+Новый публичный метод — строчка в соответствующую страницу `docs/guide/`.
 
 ## Код
 

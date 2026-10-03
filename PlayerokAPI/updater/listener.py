@@ -30,6 +30,8 @@ class Listener:
     обязательными (`ChatMessageWSFilter!`, `ItemDealFilter!`), но пустой
     объект подходит — выдача и так ограничена сессией токена.
 
+    .. code-block:: python
+
         listener = Listener(account)
 
         @listener.on(EventType.NEW_MESSAGE)
