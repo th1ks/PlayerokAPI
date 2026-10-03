@@ -52,11 +52,15 @@ class Service(str, Enum):
     AUTH = "auth"
     """Сервис авторизации нового поколения, маршруты /auth/v1/..."""
 
+    CATALOG = "catalog"
+    """Клиентский сервис каталога: items/top, items/official."""
+
 
 BASE_URLS: dict[Service, str] = {
     Service.PUBLIC: f"{WEB_ORIGIN}/rest-api/public",
     Service.BFF: "https://bff.playerok.com/rest-api/public",
     Service.AUTH: "https://sapi.playerok.com",
+    Service.CATALOG: "https://api.playerok.com",
 }
 
 #: Кому токен нужен в заголовке Authorization, а не только в cookie.

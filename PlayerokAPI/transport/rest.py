@@ -1,4 +1,4 @@
-"""REST-транспорт поверх шести бэкендов Playerok."""
+"""REST-транспорт поверх клиентских бэкендов Playerok."""
 
 from __future__ import annotations
 

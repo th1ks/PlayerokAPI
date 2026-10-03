@@ -37,6 +37,7 @@ REST-first гибрид. Где у площадки есть REST — идём �
 | REST      | `https://playerok.com/rest-api/public`     | основной публичный, cookie `token`                   |
 | REST      | `https://bff.playerok.com/rest-api/public` | BFF, `Authorization: Bearer <token>`                 |
 | REST      | `https://sapi.playerok.com`                | авторизация, `/auth/v1/...`                          |
+| REST      | `https://api.playerok.com`                 | клиентский каталог, `/items/top`, `/items/official`  |
 | GraphQL   | `https://playerok.com/graphql`             | товары, чаты, сделки, отзывы, транзакции             |
 | WS        | `wss://ws.playerok.com/graphql`            | подписки, подпротокол `graphql-transport-ws`         |
 

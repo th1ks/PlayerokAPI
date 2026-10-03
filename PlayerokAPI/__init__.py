@@ -1,5 +1,6 @@
 """Асинхронный клиент к API маркетплейса Playerok."""
 
+from .account import Account
 from .enums import (
     ChatMessageEvent,
     ChatStatus,
@@ -27,6 +28,7 @@ from .exceptions import (
     UnauthorizedError,
     WebSocketError,
 )
+from .methods import OtpResult
 from .types import (
     Chat,
     ChatMessage,
@@ -49,6 +51,7 @@ from .types import (
 __version__ = "0.1.0"
 
 __all__ = [
+    "Account",
     "AuthRequiredError",
     "Chat",
     "ChatMessage",
@@ -71,6 +74,7 @@ __all__ = [
     "ItemProfile",
     "ItemStatus",
     "NetworkError",
+    "OtpResult",
     "Page",
     "PlayerokError",
     "RateLimitError",

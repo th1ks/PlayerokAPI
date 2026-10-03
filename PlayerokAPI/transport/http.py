@@ -82,7 +82,13 @@ class HttpTransport:
     @token.setter
     def token(self, value: str | None) -> None:
         self._token = value or None
-        self._client.cookies.delete(TOKEN_COOKIE, domain=COOKIE_DOMAIN)
+        jar = self._client.cookies.jar
+        for cookie in list(jar):
+            domain = cookie.domain.lstrip(".")
+            if cookie.name == TOKEN_COOKIE and (
+                domain == "playerok.com" or domain.endswith(".playerok.com")
+            ):
+                jar.clear(cookie.domain, cookie.path, cookie.name)
         if self._token:
             self._client.cookies.set(TOKEN_COOKIE, self._token, domain=COOKIE_DOMAIN)
 
