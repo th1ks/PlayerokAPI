@@ -67,8 +67,7 @@ item.data_fields  # поля данных товара
 
 ## Создание и публикация
 
-Товар сначала создаётся черновиком, потом публикуется — публикация
-платная, поэтому у неё отдельный вызов с выбором тарифа и способа оплаты.
+Товар сначала создаётся черновиком, потом публикуется.
 
 ```python
 from PlayerokAPI.transport import Upload
@@ -81,15 +80,40 @@ item = await acc.items.create(
     attachments=[Upload.from_path("screenshot.png")],
 )
 
+await acc.items.publish(item.id)
+```
+
+Публикация на обычных условиях **бесплатна** — без аргументов берётся
+именно она: библиотека сама найдёт тариф `DEFAULT`, у него цена нулевая.
+
+### Платные тарифы
+
+Платный тариф поднимает товар в выдаче, и его цена зависит от цены
+товара, поэтому список запрашивается под конкретную цену:
+
+```python
+for status in await acc.items.priority_statuses(item.price, item_id=item.id):
+    mark = "бесплатно" if status.is_free else f"{status.price} ₽"
+    print(status.type, status.name, mark, f"{status.period} дн.")
+```
+
+```text
+ItemPriority.PREMIUM  Премиум  49 ₽  30 дн.
+ItemPriority.DEFAULT  Обычный  бесплатно  30 дн.
+```
+
+Выбранный тариф передаётся явно:
+
+```python
 await acc.items.publish(
     item.id,
-    priority_statuses=[priority_id],
+    priority_statuses=[premium_status.id],
     transaction_provider_id="LOCAL",
 )
 ```
 
-Идентификаторы тарифов берутся из `itemPriorityStatuses` в схеме
-площадки; `LOCAL` означает оплату с баланса.
+`transaction_provider_id` сервер требует всегда, даже на бесплатном
+тарифе; по умолчанию стоит `LOCAL` — оплата с баланса.
 
 ## Изменение
 
@@ -111,10 +135,15 @@ await acc.items.republish(item.id)  # вернуть
 
 ## Продвижение
 
+Уже опубликованному товару тариф можно поднять:
+
 ```python
+statuses = await acc.items.priority_statuses(item.price, item_id=item.id)
+paid = next(s for s in statuses if not s.is_free)
+
 await acc.items.promote(
     item.id,
-    priority_statuses=[vip_priority_id],
+    priority_statuses=[paid.id],
     transaction_provider_id="LOCAL",
 )
 ```

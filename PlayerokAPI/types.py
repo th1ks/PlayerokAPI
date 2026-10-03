@@ -22,6 +22,7 @@ from .enums import (
     ChatStatus,
     ChatType,
     GameType,
+    ItemBoosterType,
     ItemDealDirection,
     ItemDealStatus,
     ItemPriority,
@@ -52,6 +53,7 @@ __all__ = [
     "GameProfile",
     "Item",
     "ItemDataField",
+    "ItemPriorityStatus",
     "ItemProfile",
     "LimitRange",
     "MessageTemplate",
@@ -981,6 +983,45 @@ class Chat:
             created_at=parse_datetime(data.get("createdAt")),
             started_at=parse_datetime(data.get("startedAt")),
             finished_at=parse_datetime(data.get("finishedAt")),
+            raw=data,
+        )
+
+
+@dataclass
+class ItemPriorityStatus:
+    """Тариф публикации товара.
+
+    `DEFAULT` стоит 0 — публикация на обычных условиях бесплатна.
+    Остальные тарифы платные, и цена зависит от цены самого товара,
+    поэтому список запрашивается под конкретную цену.
+    """
+
+    id: str
+    name: str | None = None
+    type: ItemPriority | None = None
+    price: int = 0
+    period: int | None = None
+    booster_type: ItemBoosterType | None = None
+    price_range: LimitRange | None = None
+    raw: dict[str, Any] = field(default_factory=dict, repr=False, compare=False)
+
+    @property
+    def is_free(self) -> bool:
+        return self.price == 0
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> ItemPriorityStatus:
+        price_range = data.get("priceRange")
+        return cls(
+            id=data.get("id", ""),
+            name=data.get("name"),
+            type=_enum(ItemPriority, data.get("type")),
+            price=to_int(data.get("price"), 0) or 0,
+            period=to_int(data.get("period")),
+            booster_type=_enum(ItemBoosterType, data.get("boosterType")),
+            price_range=LimitRange.from_dict(price_range)
+            if isinstance(price_range, dict)
+            else None,
             raw=data,
         )
 
