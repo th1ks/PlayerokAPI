@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from ..common.endpoints import BASE_URLS, BEARER_SERVICES, FEATURE_FLAGS_URL, Service
-from ..common.utils import drop_none, format_path, unwrap_envelope
+from ..common.utils import drop_none, encode_multipart, format_path, unwrap_envelope
 from ..exceptions import AuthRequiredError
 from .http import HttpTransport
 
@@ -39,13 +39,17 @@ class RestTransport:
         path_params: dict[str, Any] | None = None,
         params: dict[str, Any] | None = None,
         json: Any = None,
-        data: Any = None,
-        files: Any = None,
+        form: dict[str, Any] | None = None,
+        files: dict[str, tuple[str, bytes, str]] | None = None,
         headers: dict[str, str] | None = None,
         auth: bool = False,
         unwrap: bool = True,
     ) -> Any:
         """Выполнить REST-запрос.
+
+        `json` — обычное JSON-тело, `form` и `files` — multipart: его требуют
+        `/deals/create`, `/steam/*`, `/chats/uncensor-message` и другие ручки,
+        отвечающие 415 на application/json.
 
         `auth=True` означает, что без токена идти бессмысленно — такой вызов
         падает сразу, не тратя сетевой round-trip на заведомый 401.
@@ -57,13 +61,17 @@ class RestTransport:
         if service in BEARER_SERVICES and self._http.token:
             merged.setdefault("Authorization", f"Bearer {self._http.token}")
 
+        content: bytes | None = None
+        if form is not None or files:
+            content, content_type = encode_multipart(drop_none(form or {}), files)
+            merged["Content-Type"] = content_type
+
         payload = await self._http.request(
             method,
             self.url(service, path, path_params),
             params=drop_none(params) if params else None,
             json=json,
-            data=data,
-            files=files,
+            content=content,
             headers=merged or None,
         )
         return unwrap_envelope(payload) if unwrap else payload

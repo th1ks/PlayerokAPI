@@ -14,6 +14,7 @@ __all__ = [
     "RateLimiter",
     "backoff_delays",
     "drop_none",
+    "encode_multipart",
     "format_path",
     "parse_datetime",
     "parse_uuid",
@@ -120,6 +121,53 @@ def backoff_delays(attempts: int, base: float = 0.5, cap: float = 8.0) -> Iterab
     """Экспоненциальные паузы между повторами."""
     for attempt in range(attempts):
         yield min(cap, base * (2**attempt))
+
+
+def encode_multipart(
+    fields: Mapping[str, Any],
+    files: Mapping[str, tuple[str, bytes, str]] | None = None,
+) -> tuple[bytes, str]:
+    """Собрать тело multipart/form-data и вернуть его вместе с Content-Type.
+
+    Часть ручек Playerok принимает только multipart и отвечает 415 на JSON:
+    `/deals/create`, `/steam/*`, `/chats/uncensor-message`,
+    `/funds-protection/send-email-code`. httpx переходит в multipart лишь
+    при непустом `files`, поэтому тело собирается вручную.
+    """
+    import secrets
+
+    crlf = "\r\n"
+    boundary = secrets.token_hex(16)
+    chunks: list[bytes] = []
+
+    for name, value in fields.items():
+        if value is None:
+            continue
+        header = f'--{boundary}{crlf}Content-Disposition: form-data; name="{name}"{crlf}{crlf}'
+        chunks.append(header.encode() + _render_field(value) + crlf.encode())
+
+    for name, (filename, content, content_type) in (files or {}).items():
+        header = (
+            f"--{boundary}{crlf}"
+            f'Content-Disposition: form-data; name="{name}"; filename="{filename}"{crlf}'
+            f"Content-Type: {content_type}{crlf}{crlf}"
+        )
+        chunks.append(header.encode() + content + crlf.encode())
+
+    chunks.append(f"--{boundary}--{crlf}".encode())
+    return b"".join(chunks), f"multipart/form-data; boundary={boundary}"
+
+
+def _render_field(value: Any) -> bytes:
+    if isinstance(value, bytes):
+        return value
+    if isinstance(value, bool):
+        return b"true" if value else b"false"
+    if isinstance(value, (dict, list)):
+        import json
+
+        return json.dumps(value, ensure_ascii=False).encode()
+    return str(value).encode()
 
 
 class RateLimiter:
