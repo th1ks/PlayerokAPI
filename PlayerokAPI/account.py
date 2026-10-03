@@ -5,7 +5,16 @@ from __future__ import annotations
 import httpx
 
 from .common.endpoints import DEFAULT_USER_AGENT
-from .methods import AuthMethods, ChatsMethods, GamesMethods, ItemsMethods, ViewerMethods
+from .methods import (
+    AuthMethods,
+    ChatsMethods,
+    DealsMethods,
+    GamesMethods,
+    ItemsMethods,
+    TestimonialsMethods,
+    TransactionsMethods,
+    ViewerMethods,
+)
 from .transport import GraphQLTransport, HttpTransport, RestTransport, WebSocketTransport
 from .types import User
 
@@ -43,6 +52,9 @@ class Account:
         self.games = GamesMethods(self.graphql)
         self.items = ItemsMethods(self.graphql, self.rest)
         self.chats = ChatsMethods(self.graphql)
+        self.deals = DealsMethods(self.graphql, self.rest)
+        self.testimonials = TestimonialsMethods(self.graphql)
+        self.transactions = TransactionsMethods(self.graphql)
         self._me: User | None = None
         self._me_token: str | None = None
 

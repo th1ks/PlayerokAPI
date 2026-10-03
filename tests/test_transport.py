@@ -144,6 +144,16 @@ async def test_5xx_on_post_is_not_retried(http: HttpTransport) -> None:
 
 
 @respx.mock
+async def test_429_on_post_is_not_retried(http: HttpTransport) -> None:
+    route = respx.post(f"{PUBLIC}/deals/create").mock(
+        return_value=httpx.Response(429, headers={"Retry-After": "0"}, json={"message": "slow"})
+    )
+    with pytest.raises(RateLimitError):
+        await RestTransport(http).post(Service.PUBLIC, "/deals/create", form={"itemId": "i1"})
+    assert route.call_count == 1
+
+
+@respx.mock
 async def test_network_failure_on_post_is_not_retried(http: HttpTransport) -> None:
     route = respx.post(GRAPHQL_URL).mock(side_effect=httpx.ReadError("response lost"))
 

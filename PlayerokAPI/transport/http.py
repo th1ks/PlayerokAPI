@@ -210,9 +210,7 @@ class HttpTransport:
 
 
 def _should_retry(method: str, status_code: int) -> bool:
-    if status_code == 429:
-        return True
-    return status_code >= 500 and method in _IDEMPOTENT
+    return method in _IDEMPOTENT and (status_code == 429 or status_code >= 500)
 
 
 def _retry_after(response: httpx.Response) -> float | None:
