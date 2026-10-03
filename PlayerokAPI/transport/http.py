@@ -189,7 +189,7 @@ class HttpTransport:
                 await asyncio.sleep(retry_after if retry_after is not None else delays[attempt])
                 continue
 
-            if attempt >= self._retries:
+            if attempt >= self._retries or method not in _IDEMPOTENT:
                 raise last_error
             logger.debug("Повтор %s %s после %s", method, url, last_error)
             await asyncio.sleep(delays[attempt])
