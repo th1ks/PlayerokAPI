@@ -167,7 +167,7 @@ class PaymentsMethods:
         data = await self._graphql.execute(
             _CARDS,
             {
-                "filter": drop_none({"userId": user_id}) or None,
+                "filter": drop_none({"userId": user_id}),
                 "pagination": {"first": first},
             },
             operation_name="VerifiedCards",
