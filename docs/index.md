@@ -70,4 +70,5 @@ api/index
 
 - [Репозиторий](https://github.com/th1ks/PlayerokAPI)
 - [PyPI](https://pypi.org/project/PlayerokAPI/)
+- [Телеграм-чат](https://t.me/playerokapi)
 - [Задачи и предложения](https://github.com/th1ks/PlayerokAPI/issues)
