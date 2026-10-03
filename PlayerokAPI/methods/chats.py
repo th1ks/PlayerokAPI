@@ -76,7 +76,7 @@ class ChatsMethods:
             _SEARCH,
             {
                 "pagination": drop_none({"first": first, "after": after}),
-                "filter": dict(filter) if filter else None,
+                "filter": dict(filter or {}),
             },
             operation_name="Chats",
             auth=True,

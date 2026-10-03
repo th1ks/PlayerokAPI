@@ -144,3 +144,42 @@ async def test_chat_methods_validate_before_network() -> None:
             await account.chats.send("ch1")
         with pytest.raises(ValueError):
             await account.chats.messages("ch1", before="a", after="b")
+
+
+# --- регрессия: null в переменных GraphQL -------------------------------
+
+
+@respx.mock
+async def test_search_without_filter_sends_empty_object() -> None:
+    """Сервер деструктурирует filter без проверки и падает на null.
+
+    Отсюда 500 «Cannot destructure property 'username' of 'filter' as it is
+    null» на обычном `chats.search(first=20)`.
+    """
+    route = respx.post(GRAPHQL_URL).mock(
+        return_value=httpx.Response(
+            200,
+            json={"data": {"chats": {"edges": [], "pageInfo": {}, "totalCount": 0}}},
+        )
+    )
+
+    async with Account(token="tok") as account:
+        await account.chats.search(first=20)
+
+    variables = json.loads(route.calls.last.request.content)["variables"]
+    assert variables["filter"] == {}
+    assert "null" not in route.calls.last.request.content.decode()
+
+
+@respx.mock
+async def test_none_variables_are_dropped() -> None:
+    route = respx.post(GRAPHQL_URL).mock(return_value=httpx.Response(200, json={"data": {"x": 1}}))
+
+    async with Account(token="tok") as account:
+        await account.graphql.execute(
+            "query X($a: String, $b: String) { x }",
+            {"a": "задано", "b": None},
+            operation_name="X",
+        )
+
+    assert json.loads(route.calls.last.request.content)["variables"] == {"a": "задано"}
