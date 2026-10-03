@@ -9,8 +9,14 @@ from .methods import (
     AuthMethods,
     ChatsMethods,
     DealsMethods,
+    FilesMethods,
+    FragmentMethods,
     GamesMethods,
     ItemsMethods,
+    LotteryMethods,
+    MiscMethods,
+    PlTokensMethods,
+    SteamMethods,
     TestimonialsMethods,
     TransactionsMethods,
     ViewerMethods,
@@ -55,6 +61,12 @@ class Account:
         self.deals = DealsMethods(self.graphql, self.rest)
         self.testimonials = TestimonialsMethods(self.graphql)
         self.transactions = TransactionsMethods(self.graphql)
+        self.files = FilesMethods(self.rest)
+        self.pl_tokens = PlTokensMethods(self.rest)
+        self.fragment = FragmentMethods(self.rest)
+        self.steam = SteamMethods(self.rest)
+        self.lottery = LotteryMethods(self.rest)
+        self.misc = MiscMethods(self.rest)
         self._me: User | None = None
         self._me_token: str | None = None
 
