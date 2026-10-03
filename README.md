@@ -66,9 +66,16 @@ async def main() -> None:
         for item in items:
             print(item.name, item.price, item.url)
 
+        top = await acc.items.top(page_size=10)
+        official = await acc.items.official(page_size=10)
+        print(len(top.items), len(official.items))
+
 
 asyncio.run(main())
 ```
+
+`acc.items.top()` и `acc.items.official()` используют REST-каталог; следующая
+страница запрашивается с `after=page.end_cursor`.
 
 `acc.items.create`, `update`, `publish`, `promote`, `discontinue` и `republish`
 требуют токен. Поля для создания товара зависят от категории и передаются через `fields`.

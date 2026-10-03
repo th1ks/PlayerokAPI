@@ -12,6 +12,63 @@ from PlayerokAPI.exceptions import AuthRequiredError
 from PlayerokAPI.transport import Upload
 
 
+@pytest.mark.parametrize("kind", ["top", "official"])
+@respx.mock
+async def test_rest_catalog_listing_and_cursor(kind: str) -> None:
+    route = respx.post(f"{BASE_URLS[Service.CATALOG]}/v1/catalog/items/{kind}").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "items": [
+                    {
+                        "id": "i1",
+                        "slug": "item-slug",
+                        "name": "Товар",
+                        "price": 100,
+                        "isOfficial": True,
+                        "seller": {
+                            "id": "u1",
+                            "username": "Playerok",
+                            "avatarUrl": "https://example.com/avatar.png",
+                        },
+                    }
+                ],
+                "endCursor": "next-cursor",
+                "hasNextPage": True,
+            },
+        )
+    )
+    async with Account() as account:
+        method = account.items.top if kind == "top" else account.items.official
+        page = await method(
+            category_id="c1",
+            exclude_item_ids=["i0"],
+            hide_sensitive_items_for_telegram=False,
+            page_size=2,
+            after="previous-cursor",
+        )
+
+    assert page.end_cursor == "next-cursor" and page.has_next_page
+    assert page.items[0].is_official is True
+    assert page.items[0].user is not None
+    assert page.items[0].user.username == "Playerok"
+    assert page.items[0].user.avatar_url == "https://example.com/avatar.png"
+    assert json.loads(route.calls.last.request.content) == {
+        "filter": {
+            "categoryIds": ["c1"],
+            "excludeItemIds": ["i0"],
+            "hideSensitiveItemsForTelegram": False,
+        },
+        "page": {"size": 2, "cursor": "previous-cursor"},
+    }
+
+
+async def test_rest_catalog_rejects_nonpositive_page_size() -> None:
+    async with Account() as account:
+        with pytest.raises(ValueError):
+            await account.items.top(page_size=0)
+
+
 @respx.mock
 async def test_games_and_categories_use_cursor_connections() -> None:
     route = respx.post(GRAPHQL_URL)

@@ -160,7 +160,7 @@ class UserProfile:
         return cls(
             id=data.get("id", ""),
             username=data.get("username"),
-            avatar_url=data.get("avatarURL"),
+            avatar_url=data.get("avatarURL") or data.get("avatarUrl"),
             role=_enum(UserRole, data.get("role")),
             rating=to_float(data.get("rating")),
             testimonial_counter=to_int(data.get("testimonialCounter")),
@@ -456,6 +456,7 @@ class ItemProfile:
     priority_position: int | None = None
     sequence: int | None = None
     is_automated: bool = False
+    is_official: bool | None = None
     keep_in_sale: bool | None = None
     created_at: datetime | None = None
     approval_date: datetime | None = None
@@ -574,7 +575,7 @@ class Item:
 
 def _item_profile_fields(data: dict[str, Any]) -> dict[str, Any]:
     game, category = data.get("game"), data.get("category")
-    user, attachment = data.get("user"), data.get("attachment")
+    user, attachment = data.get("user") or data.get("seller"), data.get("attachment")
     obtaining = data.get("obtainingType")
     return {
         "id": data.get("id", ""),
@@ -599,6 +600,7 @@ def _item_profile_fields(data: dict[str, Any]) -> dict[str, Any]:
         "priority_position": to_int(data.get("priorityPosition")),
         "sequence": to_int(data.get("sequence")),
         "is_automated": bool(data.get("isAutomated")),
+        "is_official": data.get("isOfficial"),
         "keep_in_sale": data.get("keepInSale"),
         "created_at": parse_datetime(data.get("createdAt")),
         "approval_date": parse_datetime(data.get("approvalDate")),
