@@ -93,6 +93,24 @@ await acc.steam.create_deposit("SBP", 500, account="steam_login")
 учитывает — ничего настраивать не нужно.
 :::
 
+## Защита средств
+
+Если включена, площадка требует код с почты на операции, которые тратят
+баланс: покупка товара, пополнение Steam, покупка звёзд, вывод средств.
+Оплата внешним провайдером кода не требует.
+
+```python
+from PlayerokAPI.enums import FundsProtectionCodeType
+
+me = await acc.get_me()
+if me.is_funds_protection_active:
+    await acc.misc.send_funds_protection_code(FundsProtectionCodeType.STEAM_TOP_UP)
+    await acc.steam.create_deposit("LOCAL", 500, account="login", extra={"confirmationCode": code})
+```
+
+Типы кодов: `WALLET_PAYMENT`, `STEAM_TOP_UP`, `FRAGMENT_STARS`, `WITHDRAW`,
+а также `ENABLE` и `DISABLE` для самого переключателя.
+
 ## Лотереи
 
 ```python

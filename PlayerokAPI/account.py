@@ -60,7 +60,7 @@ class Account:
         self.graphql = GraphQLTransport(self.http)
         self.ws = WebSocketTransport(self.http)
         self.auth = AuthMethods(self.rest)
-        self.viewer = ViewerMethods(self.rest)
+        self.viewer = ViewerMethods(self.rest, self.graphql)
         self.games = GamesMethods(self.graphql)
         self.items = ItemsMethods(self.graphql, self.rest)
         self.chats = ChatsMethods(self.graphql)
