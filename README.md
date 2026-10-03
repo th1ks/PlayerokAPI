@@ -17,18 +17,6 @@
 или положить рядом с ботом. Внутри — асинхронный клиент, типизированные модели
 и слушатель событий. Из зависимостей только `httpx` и `websockets`.
 
-Площадка живёт на трёх транспортах, и библиотека использует все:
-
-| Транспорт | Что закрывает |
-|---|---|
-| REST `playerok.com/rest-api/public`, `bff.playerok.com`, `sapi.playerok.com` | авторизация, профиль, файлы, PL-токены, Fragment, Steam, лотереи, создание сделки |
-| REST `api.playerok.com/v1/catalog` | публичный каталог: популярное и официальный магазин |
-| GraphQL `playerok.com/graphql` | товары, чаты, сообщения, сделки, отзывы, транзакции |
-| WebSocket `wss://ws.playerok.com/graphql` | события в реальном времени |
-
-Где у площадки есть REST — библиотека идёт в REST. Админские и внутренние ручки
-сознательно не реализованы: только то, чем пользуется обычный клиент.
-
 ## Установка
 
 ```bash
@@ -178,13 +166,6 @@ except PlayerokError:
 
 Полное руководство и справочник API — [playerok-api.readthedocs.io](https://playerok-api.readthedocs.io).
 
-Собрать локально:
-
-```bash
-pip install -e ".[docs]"
-sphinx-build -b html docs docs/_build/html
-```
-
 ## Примеры
 
 - [`examples/catalog.py`](examples/catalog.py) — публичный каталог без токена
@@ -205,20 +186,6 @@ PlayerokAPI/
 ├── methods/          модули API: auth, viewer, items, chats, deals, …
 └── updater/          события, слушатель, поллинг
 ```
-
-## Разработка
-
-```bash
-git clone https://github.com/th1ks/PlayerokAPI
-cd PlayerokAPI
-pip install -e ".[dev]"
-ruff check . && mypy PlayerokAPI && pytest
-```
-
-Тесты сетевые запросы не делают — всё на `respx`.
-
-Ветки: `main` — релизы, `develop` — интеграционная, фичи — `feat/*`, правки — `fix/*`.
-Пулл-реквесты идут в `develop`.
 
 ## Где спросить
 
