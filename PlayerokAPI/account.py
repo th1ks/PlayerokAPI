@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable, Mapping
+from typing import Any
+
 import httpx
 
 from .common.endpoints import DEFAULT_USER_AGENT
@@ -23,6 +26,7 @@ from .methods import (
 )
 from .transport import GraphQLTransport, HttpTransport, RestTransport, WebSocketTransport
 from .types import User
+from .updater import EventType, Listener, PollingRunner
 
 __all__ = ["Account"]
 
@@ -88,6 +92,19 @@ class Account:
         self._me = await self.viewer.get_me()
         self._me_token = self.token
         return self._me
+
+    def listener(
+        self,
+        *,
+        events: Iterable[EventType] | None = None,
+        filters: Mapping[EventType, Mapping[str, Any]] | None = None,
+    ) -> Listener:
+        """Слушатель событий на подписках WebSocket."""
+        return Listener(self, events=events, filters=filters)
+
+    def polling(self, *, interval: float = 5.0) -> PollingRunner:
+        """Запасной источник событий для окружений без WebSocket."""
+        return PollingRunner(self, interval=interval)
 
     async def aclose(self) -> None:
         await self.ws.close()

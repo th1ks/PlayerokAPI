@@ -9,16 +9,12 @@ from ..common.utils import drop_none
 from ..exceptions import PlayerokError
 from ..transport import GraphQLTransport
 from ..types import Page, Testimonial
+from . import fields
 
 __all__ = ["TestimonialsMethods"]
 
-_FIELDS = """
-    id status text rating createdAt updatedAt
-    deal { id status direction }
-    creator { id username avatarURL }
-    user { id username avatarURL }
-"""
-_PAGE_INFO = "startCursor endCursor hasNextPage hasPreviousPage"
+_FIELDS = fields.TESTIMONIAL
+_PAGE_INFO = fields.PAGE_INFO
 _SEARCH = f"""
 query Testimonials($pagination: Pagination, $sort: Sort, $filter: TestimonialFilter!) {{
     testimonials(pagination: $pagination, sort: $sort, filter: $filter) {{

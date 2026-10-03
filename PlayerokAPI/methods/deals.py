@@ -10,20 +10,12 @@ from ..common.utils import drop_none
 from ..exceptions import PlayerokError
 from ..transport import GraphQLTransport, RestTransport
 from ..types import Deal, Page, Transaction
+from . import fields
 
 __all__ = ["DealsMethods"]
 
-_FIELDS = """
-    id status prevStatus statusDescription direction hasProblem obtaining
-    commentFromBuyer isAutomated createdAt completedAt statusExpirationDate
-    item { __typename id name price }
-    user { id username avatarURL }
-    completedBy { id username }
-    chat { id }
-    transaction { id value fee status operation providerId createdAt }
-    testimonial { id rating text status }
-"""
-_PAGE_INFO = "startCursor endCursor hasNextPage hasPreviousPage"
+_FIELDS = fields.DEAL
+_PAGE_INFO = fields.PAGE_INFO
 _SEARCH = f"""
 query Deals($pagination: Pagination, $filter: ItemDealFilter!, $sort: Sort) {{
     deals(pagination: $pagination, filter: $filter, sort: $sort) {{
