@@ -34,3 +34,6 @@ Thumbs.db
 # Прочее, что лежит в рабочей папке и не относится к библиотеке
 playerok-5pct-fee-preview.user.js
 scratch/
+
+# Сборка документации
+docs/_build/

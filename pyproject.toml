@@ -30,6 +30,12 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+docs = [
+    "sphinx>=8.0",
+    "furo>=2024.8.6",
+    "myst-parser>=4.0",
+    "sphinx-copybutton>=0.5",
+]
 dev = [
     "pytest>=8.0",
     "pytest-asyncio>=0.24",
@@ -42,6 +48,7 @@ dev = [
 Homepage = "https://github.com/th1ks/PlayerokAPI"
 Repository = "https://github.com/th1ks/PlayerokAPI"
 Issues = "https://github.com/th1ks/PlayerokAPI/issues"
+Documentation = "https://playerokapi.readthedocs.io"
 
 [tool.hatch.build.targets.wheel]
 packages = ["PlayerokAPI"]
