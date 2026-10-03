@@ -11,7 +11,7 @@
 
 `PlayerokAPI` — клиент к Playerok по образцу `FunPayAPI`: пакет-папка, который можно и
 положить рядом с ботом или установить из исходников. Сейчас готовы транспорты,
-типизированные модели, вход по OTP и методы профиля. Остальные модули и слушатель
+типизированные модели, вход по OTP, профиль, игры и товары. Чаты, сделки и слушатель
 событий в разработке.
 
 Площадка использует REST, GraphQL и WebSocket; библиотека поддерживает все три:
@@ -48,6 +48,31 @@ async def main() -> None:
 asyncio.run(main())
 ```
 
+## Каталог
+
+```python
+import asyncio
+from PlayerokAPI import Account
+
+
+async def main() -> None:
+    async with Account() as acc:
+        games = await acc.games.search(name="Roblox")
+        game = games.items[0]
+        categories = await acc.games.categories(game_id=game.id)
+        print([category.name for category in categories])
+
+        items = await acc.items.search(game_id=game.id, query="robux", first=20)
+        for item in items:
+            print(item.name, item.price, item.url)
+
+
+asyncio.run(main())
+```
+
+`acc.items.create`, `update`, `publish`, `promote`, `discontinue` и `republish`
+требуют токен. Поля для создания товара зависят от категории и передаются через `fields`.
+
 ## Где взять токен
 
 DevTools → Application → Cookies → `https://playerok.com` → значение cookie `token`.
@@ -55,18 +80,24 @@ DevTools → Application → Cookies → `https://playerok.com` → значен
 Либо через e-mail OTP прямо из библиотеки:
 
 ```python
+import asyncio
 from PlayerokAPI import Account
 
-async with Account() as acc:
-    await acc.auth.send_otp("mail@example.com")
-    result = await acc.auth.confirm_otp("mail@example.com", code="123456")
-    if result.requires_two_factor:
-        session = result.second_factor_session
-        assert session is not None
-        token = await acc.auth.confirm_second_factor(session["token"], "654321")
-    else:
-        token = result.token
-    print(token)
+
+async def main() -> None:
+    async with Account() as acc:
+        await acc.auth.send_otp("mail@example.com")
+        result = await acc.auth.confirm_otp("mail@example.com", code="123456")
+        if result.requires_two_factor:
+            session = result.second_factor_session
+            assert session is not None
+            token = await acc.auth.confirm_second_factor(session["token"], "654321")
+        else:
+            token = result.token
+        print(token)
+
+
+asyncio.run(main())
 ```
 
 ## Структура пакета
@@ -79,7 +110,7 @@ PlayerokAPI/
 ├── exceptions.py     иерархия ошибок
 ├── common/           конфигурация, эндпоинты, утилиты
 ├── transport/        HTTP, REST, GraphQL, WebSocket
-└── methods/          модули API: auth, viewer
+└── methods/          модули API: auth, viewer, games, items
 ```
 
 ## Разработка
