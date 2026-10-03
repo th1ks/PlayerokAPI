@@ -3,34 +3,34 @@
 Лёгкая асинхронная библиотека для работы с API маркетплейса [Playerok](https://playerok.com).
 
 [![CI](https://github.com/th1ks/PlayerokAPI/actions/workflows/ci.yml/badge.svg)](https://github.com/th1ks/PlayerokAPI/actions/workflows/ci.yml)
+[![PyPI](https://img.shields.io/pypi/v/PlayerokAPI.svg)](https://pypi.org/project/PlayerokAPI/)
+[![Python](https://img.shields.io/pypi/pyversions/PlayerokAPI.svg)](https://pypi.org/project/PlayerokAPI/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-> Неофициальная библиотека. Проект никак не связан с Playerok и не поддерживается площадкой.
+> Неофициальная библиотека. Проект не связан с Playerok и не поддерживается площадкой.
 
 ## Что это
 
-`PlayerokAPI` — клиент к Playerok по образцу `FunPayAPI`: пакет-папка, который можно и
-положить рядом с ботом или установить из исходников. Сейчас готовы транспорты,
-типизированные модели, вход по OTP, профиль, игры, товары, чаты, сделки, отзывы
-и транзакции. Слушатель событий в разработке.
+Клиент к Playerok по образцу `FunPayAPI`: пакет-папка, который можно поставить из PyPI
+или положить рядом с ботом. Внутри — асинхронный клиент, типизированные модели
+и слушатель событий. Из зависимостей только `httpx` и `websockets`.
 
-Площадка использует REST, GraphQL и WebSocket; библиотека поддерживает все три:
+Площадка живёт на трёх транспортах, и библиотека использует все:
 
-- **REST** (`/rest-api/public`, `bff.playerok.com`, `sapi.playerok.com`,
-  `api.playerok.com`) — новый API. Авторизация, профиль, файлы, PL-токены,
-  лотереи, Fragment, Steam, создание сделки и отдельные ручки каталога.
-- **GraphQL** (`playerok.com/graphql`) — каталог, чаты, сообщения, сделки, отзывы, транзакции.
-- **WebSocket** (`wss://ws.playerok.com/graphql`) — события в реальном времени.
+| Транспорт | Что закрывает |
+|---|---|
+| REST `playerok.com/rest-api/public`, `bff.playerok.com`, `sapi.playerok.com` | авторизация, профиль, файлы, PL-токены, Fragment, Steam, лотереи, создание сделки |
+| REST `api.playerok.com/v1/catalog` | публичный каталог: популярное и официальный магазин |
+| GraphQL `playerok.com/graphql` | товары, чаты, сообщения, сделки, отзывы, транзакции |
+| WebSocket `wss://ws.playerok.com/graphql` | события в реальном времени |
 
 Где у площадки есть REST — библиотека идёт в REST.
 
 ## Установка
 
 ```bash
-pip install -e .
+pip install PlayerokAPI
 ```
-
-Зависимости — только `httpx` и `websockets`.
 
 ## Быстрый старт
 
@@ -42,123 +42,121 @@ from PlayerokAPI import Account
 async def main() -> None:
     async with Account(token="ваш_token_из_cookie") as acc:
         me = await acc.get_me()
-        print(f"{me.username}: {me.balance.available} ₽")
+        print(me.username, me.balance.available)
+
+        chats = await acc.chats.search(filter={"unread": True}, first=10)
+        for chat in chats:
+            print(chat.id, chat.last_message.text if chat.last_message else "")
 
 
 asyncio.run(main())
 ```
 
-## Каталог
+Часть API публичная и работает без токена:
+
+```python
+async with Account() as acc:
+    for item in await acc.items.top(page_size=5):
+        print(item.price, item.name)
+```
+
+## События
 
 ```python
 import asyncio
-from PlayerokAPI import Account
+from PlayerokAPI import Account, EventType, MessageEvent
 
 
 async def main() -> None:
-    async with Account() as acc:
-        games = await acc.games.search(name="Roblox")
-        game = games.items[0]
-        categories = await acc.games.categories(game_id=game.id)
-        print([category.name for category in categories])
+    async with Account(token="...") as acc:
+        me = await acc.get_me()
+        listener = acc.listener(events=[EventType.NEW_MESSAGE])
 
-        items = await acc.items.search(game_id=game.id, query="robux", first=20)
-        for item in items:
-            print(item.name, item.price, item.url)
+        @listener.on(EventType.NEW_MESSAGE)
+        async def on_message(event: MessageEvent) -> None:
+            message = event.message
+            if message.is_system or message.author_id == me.id:
+                return
+            await acc.send_message(message.chat_id, "Привет!")
 
-        top = await acc.items.top(page_size=10)
-        official = await acc.items.official(page_size=10)
-        print(len(top.items), len(official.items))
+        await listener.run()
 
 
 asyncio.run(main())
 ```
 
-`acc.items.top()` и `acc.items.official()` используют REST-каталог; следующая
-страница запрашивается с `after=page.end_cursor`.
+Типы событий: `NEW_MESSAGE`, `MESSAGE_EDITED`, `MESSAGE_DELETED`, `NEW_CHAT`,
+`CHAT_UPDATED`, `CHAT_READ`, `NEW_DEAL`, `DEAL_UPDATED`, `ITEM_CREATED`,
+`ITEM_UPDATED`, `ITEM_REMOVED`, `NEW_TRANSACTION`, `BALANCE_UPDATED`.
 
-`acc.items.create`, `update`, `publish`, `promote`, `discontinue` и `republish`
-требуют токен. Поля для создания товара зависят от категории и передаются через `fields`.
-
-## Чаты
+Падение обработчика логируется и не роняет ни цикл, ни соседние обработчики.
+Если WebSocket в вашем окружении недоступен, есть поллинг с тем же интерфейсом:
 
 ```python
-import asyncio
-from PlayerokAPI import Account
-
-
-async def main() -> None:
-    async with Account(token="ваш_token_из_cookie") as acc:
-        chats = await acc.chats.search(first=20)
-        if not chats.items:
-            return
-        chat = chats.items[0]
-        messages = await acc.chats.messages(chat.id, limit=30)
-        print([message.text for message in messages])
-        await acc.chats.send(chat.id, "Привет!")
-        await acc.chats.mark_read(chat.id)
-
-
-asyncio.run(main())
+async for event in acc.polling(interval=5.0).events():
+    print(event.type)
 ```
 
-Для отправки картинки передайте `images=[Upload(...)]` в `acc.chats.send()`.
-Метод загрузит её во временное хранилище и отправит полученный ID вместе с сообщением.
+## Разделы API
 
-## Сделки и кошелёк
-
-```python
-import asyncio
-from PlayerokAPI import Account
-
-
-async def main() -> None:
-    async with Account(token="ваш_token_из_cookie") as acc:
-        deals = await acc.deals.search(first=20)
-        transactions = await acc.transactions.search(first=20)
-        reviews = await acc.testimonials.search(first=20)
-        print(len(deals.items), len(transactions.items), len(reviews.items))
-
-
-asyncio.run(main())
-```
-
-`acc.deals.create(item_id, transaction_provider_id)` отправляет покупку через REST
-`/deals/create` и возвращает транзакцию. Платёжные поля зависят от провайдера и
-передаются через `fields`. Создание сделки и вывод средств не повторяются
-библиотекой автоматически, в том числе при HTTP 429. Если соединение оборвалось
-после отправки запроса, проверьте историю сделок или транзакций перед новым вызовом:
-серверный ключ идемпотентности у этих операций не подтверждён.
-
-Для вывода используется `acc.transactions.withdraw(value, provider, account)`.
-Дополнительные поля схемы `CreateWithdrawalTransactionInput` передаются через `fields`.
+| Неймспейс | Что внутри |
+|---|---|
+| `acc.auth` | вход по коду на почту, второй фактор, выход |
+| `acc.viewer` | профиль, баланс, аватар, проверка и регистрация ника |
+| `acc.games` | игры, категории |
+| `acc.items` | поиск, топ, официальный магазин, создание, публикация, продвижение |
+| `acc.chats` | чаты, сообщения, картинки, отметка о прочтении |
+| `acc.deals` | сделки, покупка, смена статуса |
+| `acc.testimonials` | отзывы |
+| `acc.transactions` | транзакции, вывод средств |
+| `acc.files` | загрузка файлов в хранилище |
+| `acc.pl_tokens` | баланс, история, кэшбэк, промокоды |
+| `acc.fragment` | покупка Telegram Stars |
+| `acc.steam` | пополнение кошелька Steam |
+| `acc.lottery` | розыгрыши и билеты |
+| `acc.misc` | гео, баннеры, feature-флаги, код защиты средств |
 
 ## Где взять токен
 
 DevTools → Application → Cookies → `https://playerok.com` → значение cookie `token`.
 
-Либо через e-mail OTP прямо из библиотеки:
+Либо через код на почту:
 
 ```python
-import asyncio
-from PlayerokAPI import Account
-
-
-async def main() -> None:
-    async with Account() as acc:
-        await acc.auth.send_otp("mail@example.com")
-        result = await acc.auth.confirm_otp("mail@example.com", code="123456")
-        if result.requires_two_factor:
-            session = result.second_factor_session
-            assert session is not None
-            token = await acc.auth.confirm_second_factor(session["token"], "654321")
-        else:
-            token = result.token
-        print(token)
-
-
-asyncio.run(main())
+async with Account() as acc:
+    await acc.auth.send_otp("mail@example.com")
+    result = await acc.auth.confirm_otp("mail@example.com", "123456")
+    print(acc.token)  # при включённой 2FA сначала acc.auth.confirm_second_factor(...)
 ```
+
+## Обработка ошибок
+
+Всё наследуется от `PlayerokError`:
+
+```python
+from PlayerokAPI import HTTPError, PlayerokError, RateLimitError, UnauthorizedError
+
+try:
+    await acc.items.get(slug="nope")
+except UnauthorizedError:
+    ...  # токен протух
+except RateLimitError as exc:
+    ...  # exc.retry_after
+except HTTPError as exc:
+    print(exc.status_code, exc.message)
+except PlayerokError:
+    ...
+```
+
+Сетевые сбои, `429` и `5xx` на идемпотентных методах повторяются автоматически.
+`POST` после `5xx` не повторяется — чтобы не создать вторую покупку.
+
+## Примеры
+
+- [`examples/catalog.py`](examples/catalog.py) — публичный каталог без токена
+- [`examples/profile.py`](examples/profile.py) — профиль, баланс, продажи
+- [`examples/autoresponder.py`](examples/autoresponder.py) — автоответчик в чатах
+- [`examples/events.py`](examples/events.py) — поток событий, WebSocket и поллинг
 
 ## Структура пакета
 
@@ -170,7 +168,8 @@ PlayerokAPI/
 ├── exceptions.py     иерархия ошибок
 ├── common/           конфигурация, эндпоинты, утилиты
 ├── transport/        HTTP, REST, GraphQL, WebSocket
-└── methods/          auth, viewer, games, items, chats, deals, testimonials, transactions
+├── methods/          модули API: auth, viewer, items, chats, deals, …
+└── updater/          события, слушатель, поллинг
 ```
 
 ## Разработка
@@ -179,10 +178,10 @@ PlayerokAPI/
 git clone https://github.com/th1ks/PlayerokAPI
 cd PlayerokAPI
 pip install -e ".[dev]"
-ruff check .
-mypy PlayerokAPI
-pytest
+ruff check . && mypy PlayerokAPI && pytest
 ```
+
+Тесты сетевые запросы не делают — всё на `respx`.
 
 Ветки: `main` — релизы, `develop` — интеграционная, фичи — `feat/*`, правки — `fix/*`.
 Пулл-реквесты идут в `develop`.

@@ -25,7 +25,7 @@ from .methods import (
     ViewerMethods,
 )
 from .transport import GraphQLTransport, HttpTransport, RestTransport, WebSocketTransport
-from .types import User
+from .types import ChatMessage, User, UserBalance
 from .updater import EventType, Listener, PollingRunner
 
 __all__ = ["Account"]
@@ -92,6 +92,14 @@ class Account:
         self._me = await self.viewer.get_me()
         self._me_token = self.token
         return self._me
+
+    async def send_message(self, chat_id: str, text: str) -> ChatMessage:
+        """Короткий путь к `acc.chats.send`."""
+        return await self.chats.send(chat_id, text)
+
+    async def get_balance(self) -> UserBalance:
+        """Короткий путь к `acc.viewer.get_balance`."""
+        return await self.viewer.get_balance()
 
     def listener(
         self,
