@@ -104,6 +104,12 @@ class Listener:
             asyncio.create_task(self._pump(sub), name=f"playerok-sub-{sub.operation}")
             for sub in self._subscriptions
         ]
+        # Молчание слушателя неотличимо от поломки, поэтому старт виден на INFO.
+        logger.info(
+            "Слушаю %s: %s",
+            _plural(len(self._subscriptions)),
+            ", ".join(sub.operation for sub in self._subscriptions),
+        )
         try:
             while self._running:
                 yield await self._queue.get()
@@ -174,3 +180,14 @@ class Listener:
                 raise
             except Exception:
                 logger.exception("Обработчик %s упал на событии %s", handler, event.type)
+
+
+def _plural(count: int) -> str:
+    tail = count % 10, count % 100
+    if tail[0] == 1 and tail[1] != 11:
+        word = "подписку"
+    elif tail[0] in (2, 3, 4) and tail[1] not in (12, 13, 14):
+        word = "подписки"
+    else:
+        word = "подписок"
+    return f"{count} {word}"
