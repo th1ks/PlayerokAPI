@@ -30,21 +30,24 @@
 ## Архитектура
 
 REST-first гибрид. Где у площадки есть REST — идём в REST, остальное через GraphQL.
+Админские и внутренние ручки не реализуем — только то, что нужно обычному клиенту.
 
 | Транспорт | Адрес                                      | Что закрывает                                        |
 |-----------|--------------------------------------------|------------------------------------------------------|
 | REST      | `https://playerok.com/rest-api/public`     | основной публичный, cookie `token`                   |
 | REST      | `https://bff.playerok.com/rest-api/public` | BFF, `Authorization: Bearer <token>`                 |
 | REST      | `https://sapi.playerok.com`                | авторизация, `/auth/v1/...`                          |
-| REST      | `https://playerok.com/rest-api`            | служебное, статистика, `/feature-flags`              |
-| REST      | `https://playerok.com/rest-api/admin`      | админское                                            |
-| REST      | `https://api.playerok.com`                 | каталог: `items/top`, `items/official`               |
 | GraphQL   | `https://playerok.com/graphql`             | товары, чаты, сделки, отзывы, транзакции             |
 | WS        | `wss://ws.playerok.com/graphql`            | подписки, подпротокол `graphql-transport-ws`         |
 
 Авторизация — одна cookie `token`. Тот же токен уходит в BFF как Bearer.
 Адрес WebSocket берётся из feature-флага `ws-url`
 (`POST https://playerok.com/rest-api/feature-flags`).
+
+Ручки `/deals/create`, `/steam/*`, `/chats/uncensor-message`,
+`/funds-protection/send-email-code` принимают только `multipart/form-data`
+и отвечают 415 на JSON. На 400 сервер сам называет недостающие поля —
+этим удобно выяснять контракт незнакомой ручки.
 
 GraphQL-схема снята интроспекцией: 104 query, 114 mutation, 18 subscription.
 `Item`/`ItemProfile` — интерфейсы (`MyItem`/`ForeignItem`), `UserProfile` — union
