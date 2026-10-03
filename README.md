@@ -3,8 +3,6 @@
 Лёгкая асинхронная библиотека для работы с API маркетплейса [Playerok](https://playerok.com).
 
 [![CI](https://github.com/th1ks/PlayerokAPI/actions/workflows/ci.yml/badge.svg)](https://github.com/th1ks/PlayerokAPI/actions/workflows/ci.yml)
-[![PyPI](https://img.shields.io/pypi/v/PlayerokAPI.svg)](https://pypi.org/project/PlayerokAPI/)
-[![Python](https://img.shields.io/pypi/pyversions/PlayerokAPI.svg)](https://pypi.org/project/PlayerokAPI/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 > Неофициальная библиотека. Проект никак не связан с Playerok и не поддерживается площадкой.
@@ -12,13 +10,15 @@
 ## Что это
 
 `PlayerokAPI` — клиент к Playerok по образцу `FunPayAPI`: пакет-папка, который можно и
-поставить из PyPI, и положить рядом с ботом. Внутри — асинхронный клиент, типизированные
-модели и слушатель событий.
+положить рядом с ботом или установить из исходников. Сейчас готовы транспорты,
+типизированные модели, вход по OTP и методы профиля. Остальные модули и слушатель
+событий в разработке.
 
-Площадка живёт на двух транспортах, и библиотека использует оба:
+Площадка использует REST, GraphQL и WebSocket; библиотека поддерживает все три:
 
-- **REST** (`/rest-api/public`, `bff.playerok.com`, `sapi.playerok.com`) — новый API.
-  Авторизация, профиль, файлы, PL-токены, лотереи, Fragment, Steam, создание сделки.
+- **REST** (`/rest-api/public`, `bff.playerok.com`, `sapi.playerok.com`,
+  `api.playerok.com`) — новый API. Авторизация, профиль, файлы, PL-токены,
+  лотереи, Fragment, Steam, создание сделки и отдельные ручки каталога.
 - **GraphQL** (`playerok.com/graphql`) — каталог, чаты, сообщения, сделки, отзывы, транзакции.
 - **WebSocket** (`wss://ws.playerok.com/graphql`) — события в реальном времени.
 
@@ -27,7 +27,7 @@
 ## Установка
 
 ```bash
-pip install PlayerokAPI
+pip install -e .
 ```
 
 Зависимости — только `httpx` и `websockets`.
@@ -44,33 +44,6 @@ async def main() -> None:
         me = await acc.get_me()
         print(f"{me.username}: {me.balance.available} ₽")
 
-        async for chat in acc.chats.iterate(unread=True):
-            print(chat.id, chat.last_message.text if chat.last_message else "")
-
-
-asyncio.run(main())
-```
-
-## Слушатель событий
-
-```python
-import asyncio
-from PlayerokAPI import Account
-from PlayerokAPI.updater import EventType, Listener
-
-
-async def main() -> None:
-    async with Account(token="...") as acc:
-        listener = Listener(acc)
-
-        @listener.on(EventType.NEW_MESSAGE)
-        async def on_message(event):
-            if event.message.user.id == acc.id:
-                return
-            await acc.chats.send_message(event.message.chat_id, "Привет!")
-
-        await listener.run()
-
 
 asyncio.run(main())
 ```
@@ -86,7 +59,13 @@ from PlayerokAPI import Account
 
 async with Account() as acc:
     await acc.auth.send_otp("mail@example.com")
-    token = await acc.auth.confirm_otp("mail@example.com", code="123456")
+    result = await acc.auth.confirm_otp("mail@example.com", code="123456")
+    if result.requires_two_factor:
+        session = result.second_factor_session
+        assert session is not None
+        token = await acc.auth.confirm_second_factor(session["token"], "654321")
+    else:
+        token = result.token
     print(token)
 ```
 
@@ -100,13 +79,8 @@ PlayerokAPI/
 ├── exceptions.py     иерархия ошибок
 ├── common/           конфигурация, эндпоинты, утилиты
 ├── transport/        HTTP, REST, GraphQL, WebSocket
-├── methods/          модули API: auth, viewer, items, chats, deals, …
-└── updater/          события и слушатель
+└── methods/          модули API: auth, viewer
 ```
-
-## Примеры
-
-Разобранные сценарии лежат в [`examples/`](examples/).
 
 ## Разработка
 
