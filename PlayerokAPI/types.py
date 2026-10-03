@@ -229,6 +229,7 @@ class User:
     is_vip: bool = False
     has_frozen_balance: bool = False
     has_confirmed_phone_number: bool = False
+    is_funds_protection_active: bool = False
     can_publish_items: bool = False
     approved_seller: bool = False
     unread_chats_counter: int = 0
@@ -262,6 +263,7 @@ class User:
             is_vip=bool(data.get("isVip")),
             has_frozen_balance=bool(data.get("hasFrozenBalance")),
             has_confirmed_phone_number=bool(data.get("hasConfirmedPhoneNumber")),
+            is_funds_protection_active=bool(data.get("isFundsProtectionActive")),
             can_publish_items=bool(data.get("canPublishItems")),
             approved_seller=bool(data.get("approvedSeller")),
             unread_chats_counter=to_int(data.get("unreadChatsCounter"), 0) or 0,

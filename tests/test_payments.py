@@ -331,3 +331,57 @@ async def test_report_problem_validates_input(acc: Account) -> None:
 def test_message_edit_and_delete_are_gone(acc: Account) -> None:
     assert not hasattr(acc.chats, "edit")
     assert not hasattr(acc.chats, "remove")
+
+
+# --- защита средств ------------------------------------------------------
+
+
+@respx.mock
+async def test_funds_protection_flag_from_viewer(acc: Account) -> None:
+    respx.get(f"{BFF}/viewer").mock(
+        return_value=httpx.Response(
+            200, json={"id": "u1", "username": "seller", "isFundsProtectionActive": True}
+        )
+    )
+    respx.get(f"{BFF}/viewer/balance").mock(return_value=httpx.Response(200, json={"value": 0}))
+
+    me = await acc.get_me()
+
+    assert me.is_funds_protection_active is True
+
+
+@respx.mock
+async def test_funds_protection_flag_absent_means_off(acc: Account) -> None:
+    respx.get(f"{BFF}/viewer").mock(return_value=httpx.Response(200, json={"id": "u1"}))
+    respx.get(f"{BFF}/viewer/balance").mock(return_value=httpx.Response(200, json={"value": 0}))
+
+    assert (await acc.get_me()).is_funds_protection_active is False
+
+
+@respx.mock
+async def test_set_funds_protection(acc: Account) -> None:
+    route = respx.post(GRAPHQL_URL).mock(return_value=gql({"setFundsProtectionActive": True}))
+
+    assert await acc.viewer.set_funds_protection(True, "123456") is True
+    assert sent(route)["variables"]["input"] == {
+        "isFundsProtectionActive": True,
+        "confirmationCode": "123456",
+    }
+
+
+async def test_set_funds_protection_requires_code(acc: Account) -> None:
+    with pytest.raises(ValueError):
+        await acc.viewer.set_funds_protection(False, "")
+
+
+@respx.mock
+async def test_purchase_passes_confirmation_code(acc: Account) -> None:
+    route = respx.post(f"{PUBLIC}/deals/create").mock(
+        return_value=httpx.Response(200, json={"transaction": {"id": "t1"}})
+    )
+
+    await acc.deals.create("i1", "LOCAL", confirmation_code="123456")
+
+    body = route.calls.last.request.content
+    assert b'name="confirmationCode"' in body
+    assert b"123456" in body

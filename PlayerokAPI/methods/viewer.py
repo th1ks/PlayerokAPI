@@ -6,15 +6,23 @@ from typing import Any
 
 from ..common.endpoints import Service
 from ..exceptions import PlayerokError
-from ..transport.rest import RestTransport
+from ..transport import GraphQLTransport, RestTransport
 from ..types import BankCard, User, UserBalance
 
 __all__ = ["ViewerMethods"]
 
 
+_SET_FUNDS_PROTECTION = """
+mutation SetFundsProtectionActive($input: SetFundsProtectionActiveInput!) {
+    setFundsProtectionActive(input: $input)
+}
+"""
+
+
 class ViewerMethods:
-    def __init__(self, rest: RestTransport) -> None:
+    def __init__(self, rest: RestTransport, graphql: GraphQLTransport) -> None:
         self._rest = rest
+        self._graphql = graphql
 
     async def get_me(self) -> User:
         """Получить профиль и доступный баланс."""
@@ -113,6 +121,22 @@ class ViewerMethods:
             json=body or {},
             auth=True,
         )
+
+    async def set_funds_protection(self, active: bool, confirmation_code: str) -> bool:
+        """Включить или выключить защиту средств.
+
+        Код приходит на почту; запросить его — `misc.send_funds_protection_code`
+        с типом `ENABLE` или `DISABLE`.
+        """
+        if not confirmation_code:
+            raise ValueError("Нужен код подтверждения с почты")
+        data = await self._graphql.execute(
+            _SET_FUNDS_PROTECTION,
+            {"input": {"isFundsProtectionActive": active, "confirmationCode": confirmation_code}},
+            operation_name="SetFundsProtectionActive",
+            auth=True,
+        )
+        return bool(data.get("setFundsProtectionActive"))
 
     async def set_avatar(self, avatar_id: str) -> dict[str, Any]:
         """Привязать уже загруженный файл к профилю."""

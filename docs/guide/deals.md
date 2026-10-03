@@ -47,6 +47,30 @@ print(transaction.id, transaction.status)
 чтобы повтор не создал вторую сделку.
 :::
 
+### Если включена защита средств
+
+При включённой защите оплата **с баланса** требует код с почты. На оплату
+внешним провайдером это не распространяется — там подтверждает сам платёжный
+сервис.
+
+```python
+from PlayerokAPI.enums import FundsProtectionCodeType
+
+me = await acc.get_me()
+
+if me.is_funds_protection_active:
+    await acc.misc.send_funds_protection_code(FundsProtectionCodeType.WALLET_PAYMENT)
+    code = input("Код с почты: ")
+    deal = await acc.deals.create(item_id, "LOCAL", confirmation_code=code)
+else:
+    deal = await acc.deals.create(item_id, "LOCAL")
+```
+
+Проверять флаг нужно **до** запроса, а не ловить ошибку после: сайт делает
+именно так. Тип кода зависит от операции — `WALLET_PAYMENT` для покупки
+товара, `STEAM_TOP_UP` для пополнения Steam, `FRAGMENT_STARS` для звёзд,
+`WITHDRAW` для вывода.
+
 Остальные поля `CreateItemDealInput` передаются через `extra`:
 
 ```python
@@ -114,4 +138,11 @@ from PlayerokAPI.enums import FundsProtectionCodeType
 
 await acc.misc.send_funds_protection_code(FundsProtectionCodeType.WITHDRAW)
 await acc.transactions.withdraw(1000, "BANK_CARD", account, confirmation_code="123456")
+```
+
+Саму защиту можно включить и выключить — тоже по коду с почты:
+
+```python
+await acc.misc.send_funds_protection_code(FundsProtectionCodeType.ENABLE)
+await acc.viewer.set_funds_protection(True, "123456")
 ```
