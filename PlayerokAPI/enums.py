@@ -17,6 +17,7 @@ __all__ = [
     "ChatStatus",
     "ChatType",
     "FeeMultiplier",
+    "FundsProtectionCodeType",
     "GameCategoryDataFieldType",
     "GameType",
     "ItemBoosterType",
@@ -227,6 +228,7 @@ class TransactionProvider(OpenEnum):
     ENOT = "ENOT"
     UNITPAY = "UNITPAY"
     PAYMART = "PAYMART"
+    RURUPAY = "RURUPAY"
     PROMO_CODE = "PROMO_CODE"
     PENDING_INCOME = "PENDING_INCOME"
     TESTPAY = "TESTPAY"
@@ -265,6 +267,17 @@ class PaymentGateway(OpenEnum):
     QIWI = "QIWI"
     TOME = "TOME"
     TESTPAY = "TESTPAY"
+
+
+class FundsProtectionCodeType(OpenEnum):
+    """Зачем запрашивается код защиты средств."""
+
+    ENABLE = "ENABLE"
+    DISABLE = "DISABLE"
+    WITHDRAW = "WITHDRAW"
+    WALLET_PAYMENT = "WALLET_PAYMENT"
+    STEAM_TOP_UP = "STEAM_TOP_UP"
+    FRAGMENT_STARS = "FRAGMENT_STARS"
 
 
 class UserRole(OpenEnum):
