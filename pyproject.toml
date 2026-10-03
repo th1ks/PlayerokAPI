@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "PlayerokAPI"
-version = "0.1.0"
+dynamic = ["version"]
 description = "Лёгкая асинхронная библиотека для работы с API маркетплейса Playerok"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -50,6 +50,10 @@ Repository = "https://github.com/th1ks/PlayerokAPI"
 Issues = "https://github.com/th1ks/PlayerokAPI/issues"
 Documentation = "https://playerok-api.readthedocs.io"
 Chat = "https://t.me/playerokapi"
+
+# Единственный источник версии — __version__ в пакете.
+[tool.hatch.version]
+path = "PlayerokAPI/__init__.py"
 
 [tool.hatch.build.targets.wheel]
 packages = ["PlayerokAPI"]
