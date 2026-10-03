@@ -11,8 +11,8 @@
 
 `PlayerokAPI` — клиент к Playerok по образцу `FunPayAPI`: пакет-папка, который можно и
 положить рядом с ботом или установить из исходников. Сейчас готовы транспорты,
-типизированные модели, вход по OTP, профиль, игры, товары и чаты. Сделки и слушатель
-событий в разработке.
+типизированные модели, вход по OTP, профиль, игры, товары, чаты, сделки, отзывы
+и транзакции. Слушатель событий в разработке.
 
 Площадка использует REST, GraphQL и WebSocket; библиотека поддерживает все три:
 
@@ -105,6 +105,34 @@ asyncio.run(main())
 Для отправки картинки передайте `images=[Upload(...)]` в `acc.chats.send()`.
 Метод загрузит её во временное хранилище и отправит полученный ID вместе с сообщением.
 
+## Сделки и кошелёк
+
+```python
+import asyncio
+from PlayerokAPI import Account
+
+
+async def main() -> None:
+    async with Account(token="ваш_token_из_cookie") as acc:
+        deals = await acc.deals.search(first=20)
+        transactions = await acc.transactions.search(first=20)
+        reviews = await acc.testimonials.search(first=20)
+        print(len(deals.items), len(transactions.items), len(reviews.items))
+
+
+asyncio.run(main())
+```
+
+`acc.deals.create(item_id, transaction_provider_id)` отправляет покупку через REST
+`/deals/create` и возвращает транзакцию. Платёжные поля зависят от провайдера и
+передаются через `fields`. Создание сделки и вывод средств не повторяются
+библиотекой автоматически, в том числе при HTTP 429. Если соединение оборвалось
+после отправки запроса, проверьте историю сделок или транзакций перед новым вызовом:
+серверный ключ идемпотентности у этих операций не подтверждён.
+
+Для вывода используется `acc.transactions.withdraw(value, provider, account)`.
+Дополнительные поля схемы `CreateWithdrawalTransactionInput` передаются через `fields`.
+
 ## Где взять токен
 
 DevTools → Application → Cookies → `https://playerok.com` → значение cookie `token`.
@@ -142,7 +170,7 @@ PlayerokAPI/
 ├── exceptions.py     иерархия ошибок
 ├── common/           конфигурация, эндпоинты, утилиты
 ├── transport/        HTTP, REST, GraphQL, WebSocket
-└── methods/          модули API: auth, viewer, games, items, chats
+└── methods/          auth, viewer, games, items, chats, deals, testimonials, transactions
 ```
 
 ## Разработка
