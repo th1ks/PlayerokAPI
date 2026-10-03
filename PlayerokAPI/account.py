@@ -18,6 +18,8 @@ from .methods import (
     ItemsMethods,
     LotteryMethods,
     MiscMethods,
+    NotificationsMethods,
+    PaymentsMethods,
     PlTokensMethods,
     SteamMethods,
     TestimonialsMethods,
@@ -71,6 +73,8 @@ class Account:
         self.steam = SteamMethods(self.rest)
         self.lottery = LotteryMethods(self.rest)
         self.misc = MiscMethods(self.rest)
+        self.payments = PaymentsMethods(self.graphql)
+        self.notifications = NotificationsMethods(self.graphql, self.user_id)
         self._me: User | None = None
         self._me_token: str | None = None
 
@@ -87,6 +91,13 @@ class Account:
     @property
     def id(self) -> str | None:
         return self._me.id if self._me and self._me_token == self.token else None
+
+    async def user_id(self) -> str:
+        """Идентификатор текущего аккаунта; при необходимости тянет профиль."""
+        known = self.id
+        if known:
+            return known
+        return (await self.get_me()).id
 
     async def get_me(self) -> User:
         self._me = await self.viewer.get_me()

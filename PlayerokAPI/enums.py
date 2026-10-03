@@ -11,6 +11,8 @@ from enum import Enum
 from typing import Any
 
 __all__ = [
+    "BankCardStatus",
+    "BankCardType",
     "ChatAttachmentsSource",
     "ChatMessageButtonType",
     "ChatMessageEvent",
@@ -27,10 +29,14 @@ __all__ = [
     "ItemSellerType",
     "ItemStatus",
     "ItemStockType",
+    "MessageTemplateType",
+    "NotificationProviderId",
+    "PaymentCurrency",
     "PaymentGateway",
     "SortDirection",
     "TestimonialStatus",
     "TransactionDirection",
+    "TransactionForm",
     "TransactionOperation",
     "TransactionPaymentMethod",
     "TransactionProvider",
@@ -267,6 +273,57 @@ class PaymentGateway(OpenEnum):
     QIWI = "QIWI"
     TOME = "TOME"
     TESTPAY = "TESTPAY"
+
+
+class BankCardType(OpenEnum):
+    VISA = "VISA"
+    MASTERCARD = "MASTERCARD"
+    MIR = "MIR"
+    UNIONPAY = "UNIONPAY"
+    JCB = "JCB"
+    AMERICAN_EXPRESS = "AMERICAN_EXPRESS"
+    DISCOVER = "DISCOVER"
+    UNKNOWN = "UNKNOWN"
+
+
+class BankCardStatus(OpenEnum):
+    PENDING = "PENDING"
+    VERIFIED = "VERIFIED"
+    FAILED = "FAILED"
+
+
+class NotificationProviderId(OpenEnum):
+    EMAIL = "EMAIL"
+    PUSH = "PUSH"
+    TELEGRAM = "TELEGRAM"
+    VK = "VK"
+    WS = "WS"
+
+
+class PaymentCurrency(OpenEnum):
+    RUB = "RUB"
+    BYN = "BYN"
+    KZT = "KZT"
+    USD = "USD"
+
+
+class TransactionForm(OpenEnum):
+    """Для чего подбираются способы оплаты."""
+
+    BALANCE = "BALANCE"
+    ITEM = "ITEM"
+    PREMIUM = "PREMIUM"
+    STEAM_TOP_UP = "STEAM_TOP_UP"
+    FRAGMENT_TOP_UP = "FRAGMENT_TOP_UP"
+
+
+class MessageTemplateType(OpenEnum):
+    ACTIVE_DEAL_PROBLEM = "ACTIVE_DEAL_PROBLEM"
+    FINISHED_DEAL_PROBLEM = "FINISHED_DEAL_PROBLEM"
+    SUPPORT = "SUPPORT"
+    ITEM_MODERATION = "ITEM_MODERATION"
+    WARNING = "WARNING"
+    BAN = "BAN"
 
 
 class FundsProtectionCodeType(OpenEnum):

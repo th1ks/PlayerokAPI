@@ -15,6 +15,8 @@ from typing import Any, Generic, TypeVar
 
 from .common.utils import parse_datetime, to_float, to_int
 from .enums import (
+    BankCardStatus,
+    BankCardType,
     ChatMessageButtonType,
     ChatMessageEvent,
     ChatStatus,
@@ -26,6 +28,8 @@ from .enums import (
     ItemSellerType,
     ItemStatus,
     ItemStockType,
+    MessageTemplateType,
+    NotificationProviderId,
     TestimonialStatus,
     TransactionDirection,
     TransactionOperation,
@@ -36,6 +40,7 @@ from .enums import (
 )
 
 __all__ = [
+    "BankCard",
     "Chat",
     "ChatMessage",
     "ChatMessageButton",
@@ -48,8 +53,13 @@ __all__ = [
     "Item",
     "ItemDataField",
     "ItemProfile",
+    "LimitRange",
+    "MessageTemplate",
+    "NotificationChannel",
     "ObtainingType",
     "Page",
+    "PaymentMethod",
+    "PaymentProvider",
     "Testimonial",
     "Transaction",
     "User",
@@ -973,3 +983,168 @@ class Chat:
             finished_at=parse_datetime(data.get("finishedAt")),
             raw=data,
         )
+
+
+# --- платежи -------------------------------------------------------------
+
+
+@dataclass
+class LimitRange:
+    """Границы суммы в одну сторону."""
+
+    min: int | None = None
+    max: int | None = None
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> LimitRange:
+        return cls(min=to_int(data.get("min")), max=to_int(data.get("max")))
+
+
+@dataclass
+class PaymentMethod:
+    """Способ оплаты внутри провайдера."""
+
+    id: str
+    name: str | None = None
+    provider_id: TransactionProvider | None = None
+    enabled: bool = True
+    fee: float = 0.0
+    incoming: LimitRange | None = None
+    outgoing: LimitRange | None = None
+    raw: dict[str, Any] = field(default_factory=dict, repr=False, compare=False)
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> PaymentMethod:
+        incoming, outgoing = _limits(data.get("limits"))
+        return cls(
+            id=data.get("id", ""),
+            name=data.get("name"),
+            provider_id=_enum(TransactionProvider, data.get("providerId")),
+            enabled=bool(data.get("enabled", True)),
+            fee=to_float(data.get("fee"), 0.0) or 0.0,
+            incoming=incoming,
+            outgoing=outgoing,
+            raw=data,
+        )
+
+
+@dataclass
+class PaymentProvider:
+    """Платёжный провайдер: комиссия, лимиты, доступные способы."""
+
+    id: TransactionProvider | None = None
+    name: str | None = None
+    description: str | None = None
+    fee: float = 0.0
+    min_fee_amount: float | None = None
+    currency: str | None = None
+    incoming: LimitRange | None = None
+    outgoing: LimitRange | None = None
+    payment_methods: list[PaymentMethod] = field(default_factory=list)
+    raw: dict[str, Any] = field(default_factory=dict, repr=False, compare=False)
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> PaymentProvider:
+        incoming, outgoing = _limits(data.get("limits"))
+        return cls(
+            id=_enum(TransactionProvider, data.get("id")),
+            name=data.get("name"),
+            description=data.get("description"),
+            fee=to_float(data.get("fee"), 0.0) or 0.0,
+            min_fee_amount=to_float(data.get("minFeeAmount")),
+            currency=data.get("currency"),
+            incoming=incoming,
+            outgoing=outgoing,
+            payment_methods=_list(PaymentMethod, data.get("paymentMethods")),
+            raw=data,
+        )
+
+
+@dataclass
+class BankCard:
+    """Привязанная банковская карта."""
+
+    id: str
+    first_six: str | None = None
+    last_four: str | None = None
+    card_type: BankCardType | None = None
+    status: BankCardStatus | None = None
+    is_chosen: bool = False
+    user_id: str | None = None
+    raw: dict[str, Any] = field(default_factory=dict, repr=False, compare=False)
+
+    @property
+    def masked(self) -> str:
+        return f"{self.first_six or '······'}••••••{self.last_four or '····'}"
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> BankCard:
+        return cls(
+            id=data.get("id", ""),
+            first_six=data.get("cardFirstSix"),
+            last_four=data.get("cardLastFour"),
+            card_type=_enum(BankCardType, data.get("cardType")),
+            status=_enum(BankCardStatus, data.get("status")),
+            is_chosen=bool(data.get("isChosen")),
+            user_id=data.get("userId"),
+            raw=data,
+        )
+
+
+@dataclass
+class NotificationChannel:
+    """Канал уведомлений: почта, Telegram, push."""
+
+    id: NotificationProviderId | None = None
+    name: str | None = None
+    description: str | None = None
+    enabled: bool = False
+    props: dict[str, Any] = field(default_factory=dict)
+    raw: dict[str, Any] = field(default_factory=dict, repr=False, compare=False)
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> NotificationChannel:
+        return cls(
+            id=_enum(NotificationProviderId, data.get("id")),
+            name=data.get("name"),
+            description=data.get("description"),
+            enabled=bool(data.get("enabled")),
+            props=dict(data.get("props") or {}),
+            raw=data,
+        )
+
+
+@dataclass
+class MessageTemplate:
+    """Заготовка текста. Из них же собран список типов проблем по сделке."""
+
+    id: str
+    title: str | None = None
+    text: str | None = None
+    type: MessageTemplateType | None = None
+    group_id: str | None = None
+    sequence: int | None = None
+    raw: dict[str, Any] = field(default_factory=dict, repr=False, compare=False)
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> MessageTemplate:
+        return cls(
+            id=data.get("id", ""),
+            title=data.get("title"),
+            text=data.get("text"),
+            type=_enum(MessageTemplateType, data.get("type")),
+            group_id=data.get("groupId"),
+            sequence=to_int(data.get("sequence")),
+            raw=data,
+        )
+
+
+def _limits(data: Any) -> tuple[LimitRange | None, LimitRange | None]:
+    if not isinstance(data, dict):
+        return None, None
+    incoming = data.get("incoming")
+    outgoing = data.get("outgoing")
+    return (
+        LimitRange.from_dict(incoming) if isinstance(incoming, dict) else None,
+        LimitRange.from_dict(outgoing) if isinstance(outgoing, dict) else None,
+    )

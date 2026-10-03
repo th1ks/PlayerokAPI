@@ -44,11 +44,6 @@ mutation CreateChatMessage($input: CreateChatMessageInput!) {{
     createChatMessage(input: $input) {{ {_MESSAGE_FIELDS} }}
 }}
 """
-_UPDATE = f"""
-mutation UpdateChatMessage($input: UpdateChatMessageInput!) {{
-    updateChatMessage(input: $input) {{ {_MESSAGE_FIELDS} }}
-}}
-"""
 _MARK_READ = f"""
 mutation MarkChatAsRead($input: MarkChatAsReadInput!) {{
     markChatAsRead(input: $input) {{ {_CHAT_FIELDS} }}
@@ -59,11 +54,6 @@ mutation UploadChatImage($input: UploadTemporaryAttachmentInput!, $file: Upload!
     uploadChatImageIntoTemporaryStore(input: $input, file: $file) {
         id url chatId clientAttachmentId expiresAt
     }
-}
-"""
-_REMOVE = """
-mutation RemoveChatMessage($id: UUID!) {
-    removeChatMessage(id: $id) { id deletedAt }
 }
 """
 
@@ -175,16 +165,6 @@ class ChatsMethods:
         )
         return ChatMessage.from_dict(_object(data, "createChatMessage"), chat_id)
 
-    async def edit(self, message_id: str, text: str) -> ChatMessage:
-        """Изменить текст своего сообщения."""
-        data = await self._graphql.execute(
-            _UPDATE,
-            {"input": {"id": message_id, "text": text}},
-            operation_name="UpdateChatMessage",
-            auth=True,
-        )
-        return ChatMessage.from_dict(_object(data, "updateChatMessage"))
-
     async def mark_read(self, chat_id: str) -> Chat:
         """Отметить сообщения чата прочитанными."""
         data = await self._graphql.execute(
@@ -194,16 +174,6 @@ class ChatsMethods:
             auth=True,
         )
         return Chat.from_dict(_object(data, "markChatAsRead"))
-
-    async def remove(self, message_id: str) -> ChatMessage:
-        """Удалить своё сообщение."""
-        data = await self._graphql.execute(
-            _REMOVE,
-            {"id": message_id},
-            operation_name="RemoveChatMessage",
-            auth=True,
-        )
-        return ChatMessage.from_dict(_object(data, "removeChatMessage"))
 
 
 def _object(data: dict[str, Any], key: str) -> dict[str, Any]:

@@ -7,9 +7,10 @@ from typing import Any
 
 from ..common.endpoints import Service
 from ..common.utils import drop_none
+from ..enums import MessageTemplateType
 from ..exceptions import PlayerokError
 from ..transport import GraphQLTransport, RestTransport
-from ..types import Deal, Page, Transaction
+from ..types import Deal, MessageTemplate, Page, Transaction
 from . import fields
 
 __all__ = ["DealsMethods"]
@@ -26,6 +27,20 @@ query Deals($pagination: Pagination, $filter: ItemDealFilter!, $sort: Sort) {{
 }}
 """
 _GET = f"query Deal($id: UUID!) {{ deal(id: $id) {{ {_FIELDS} }} }}"
+_PROBLEM_TYPES = f"""
+query MessageTemplates($pagination: Pagination, $filter: MessageTemplateFilter!) {{
+    messageTemplates(pagination: $pagination, filter: $filter) {{
+        edges {{ node {{ id title text type groupId sequence }} }}
+        pageInfo {{ {_PAGE_INFO} }}
+        totalCount
+    }}
+}}
+"""
+_REPORT_PROBLEM = f"""
+mutation ReportDealProblem($input: ReportDealProblemInput!) {{
+    reportDealProblem(input: $input) {{ {_FIELDS} }}
+}}
+"""
 _UPDATE = f"""
 mutation UpdateDeal($input: UpdateItemDealInput!) {{
     updateDeal(input: $input) {{ {_FIELDS} }}
@@ -73,12 +88,12 @@ class DealsMethods:
         *,
         comment_from_buyer: str | None = None,
         confirmation_code: str | None = None,
-        fields: Mapping[str, Any] | None = None,
+        extra: Mapping[str, Any] | None = None,
     ) -> Transaction:
         """Купить товар через REST. Запрос отправляется один раз без автоповтора."""
         if not item_id or not transaction_provider_id:
             raise ValueError("Нужны item_id и transaction_provider_id")
-        body = dict(fields or {})
+        body = dict(extra or {})
         body.update(
             drop_none(
                 {
@@ -98,6 +113,49 @@ class DealsMethods:
         if not isinstance(payload, dict) or not isinstance(payload.get("transaction"), dict):
             raise PlayerokError("Сервер не вернул транзакцию созданной сделки")
         return Transaction.from_dict(payload["transaction"])
+
+    async def problem_types(self, *, finished: bool = False) -> list[MessageTemplate]:
+        """Варианты проблемы для жалобы по сделке.
+
+        Площадка хранит их как шаблоны сообщений: активная сделка и
+        завершённая разведены по разным типам.
+        """
+        template_type = (
+            MessageTemplateType.FINISHED_DEAL_PROBLEM
+            if finished
+            else MessageTemplateType.ACTIVE_DEAL_PROBLEM
+        )
+        data = await self._graphql.execute(
+            _PROBLEM_TYPES,
+            {"pagination": {"first": 100}, "filter": {"type": template_type.value}},
+            operation_name="MessageTemplates",
+            auth=True,
+        )
+        page: Page[MessageTemplate] = Page.from_connection(
+            _object(data, "messageTemplates"), MessageTemplate
+        )
+        return page.items
+
+    async def report_problem(self, deal_id: str, problem_type_id: str, description: str) -> Deal:
+        """Пожаловаться на проблему по сделке.
+
+        `problem_type_id` — идентификатор из `problem_types()`.
+        """
+        if not problem_type_id or not description:
+            raise ValueError("Нужны problem_type_id и description")
+        data = await self._graphql.execute(
+            _REPORT_PROBLEM,
+            {
+                "input": {
+                    "dealId": deal_id,
+                    "problemTypeId": problem_type_id,
+                    "description": description,
+                }
+            },
+            operation_name="ReportDealProblem",
+            auth=True,
+        )
+        return Deal.from_dict(_object(data, "reportDealProblem"))
 
     async def update(self, deal_id: str, changes: Mapping[str, Any]) -> Deal:
         """Изменить сделку; ключи changes соответствуют `UpdateItemDealInput`."""

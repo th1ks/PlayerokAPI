@@ -54,7 +54,7 @@ async def test_create_deal_uses_single_multipart_rest_request() -> None:
     )
     async with Account(token="tok", retries=3) as account:
         transaction = await account.deals.create(
-            "i1", "LOCAL", comment_from_buyer="привет", fields={"obtainingFields": []}
+            "i1", "LOCAL", comment_from_buyer="привет", extra={"obtainingFields": []}
         )
         assert transaction.id == "t1" and transaction.value == 100
     assert route.call_count == 1

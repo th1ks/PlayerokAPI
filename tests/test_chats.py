@@ -126,24 +126,14 @@ async def test_send_uploads_image_then_uses_its_id() -> None:
 
 
 @respx.mock
-async def test_edit_read_and_remove_use_client_mutations() -> None:
-    route = respx.post(GRAPHQL_URL)
-    route.side_effect = [
-        httpx.Response(200, json={"data": {"updateChatMessage": {"id": "m1", "text": "новый"}}}),
-        httpx.Response(200, json={"data": {"markChatAsRead": {"id": "ch1"}}}),
-        httpx.Response(200, json={"data": {"removeChatMessage": {"id": "m1"}}}),
-    ]
+async def test_mark_read_uses_client_mutation() -> None:
+    route = respx.post(GRAPHQL_URL).mock(
+        return_value=httpx.Response(200, json={"data": {"markChatAsRead": {"id": "ch1"}}})
+    )
     async with Account(token="tok") as account:
-        assert (await account.chats.edit("m1", "новый")).text == "новый"
         assert (await account.chats.mark_read("ch1")).id == "ch1"
-        assert (await account.chats.remove("m1")).id == "m1"
 
-    assert json.loads(route.calls[0].request.content)["variables"]["input"] == {
-        "id": "m1",
-        "text": "новый",
-    }
-    assert json.loads(route.calls[1].request.content)["variables"]["input"] == {"chatId": "ch1"}
-    assert json.loads(route.calls[2].request.content)["variables"] == {"id": "m1"}
+    assert json.loads(route.calls.last.request.content)["variables"]["input"] == {"chatId": "ch1"}
 
 
 async def test_chat_methods_validate_before_network() -> None:
