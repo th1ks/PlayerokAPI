@@ -70,6 +70,78 @@ class ItemsMethods:
         self._graphql = graphql
         self._rest = rest
 
+    async def top(
+        self,
+        *,
+        category_id: str | None = None,
+        exclude_item_ids: Sequence[str] = (),
+        hide_sensitive_items_for_telegram: bool | None = None,
+        page_size: int | None = None,
+        after: str | None = None,
+    ) -> Page[ItemProfile]:
+        """Популярные товары из клиентского REST-каталога."""
+        return await self._catalog_listing(
+            "top",
+            category_id,
+            exclude_item_ids,
+            hide_sensitive_items_for_telegram,
+            page_size,
+            after,
+        )
+
+    async def official(
+        self,
+        *,
+        category_id: str | None = None,
+        exclude_item_ids: Sequence[str] = (),
+        hide_sensitive_items_for_telegram: bool | None = None,
+        page_size: int | None = None,
+        after: str | None = None,
+    ) -> Page[ItemProfile]:
+        """Официальные товары из клиентского REST-каталога."""
+        return await self._catalog_listing(
+            "official",
+            category_id,
+            exclude_item_ids,
+            hide_sensitive_items_for_telegram,
+            page_size,
+            after,
+        )
+
+    async def _catalog_listing(
+        self,
+        kind: str,
+        category_id: str | None,
+        exclude_item_ids: Sequence[str],
+        hide_sensitive_items_for_telegram: bool | None,
+        page_size: int | None,
+        after: str | None,
+    ) -> Page[ItemProfile]:
+        if page_size is not None and page_size < 1:
+            raise ValueError("page_size должен быть положительным")
+        filters = drop_none(
+            {
+                "categoryIds": [category_id] if category_id else None,
+                "excludeItemIds": list(exclude_item_ids) or None,
+                "hideSensitiveItemsForTelegram": hide_sensitive_items_for_telegram,
+            }
+        )
+        payload = await self._rest.post(
+            Service.CATALOG,
+            f"/v1/catalog/items/{kind}",
+            json={"filter": filters, "page": drop_none({"size": page_size, "cursor": after})},
+        )
+        if not isinstance(payload, dict) or not isinstance(payload.get("items"), list):
+            raise PlayerokError("Неожиданный ответ REST-каталога")
+        items = payload["items"]
+        if not all(isinstance(item, dict) for item in items):
+            raise PlayerokError("Неожиданный товар в ответе REST-каталога")
+        return Page(
+            items=[ItemProfile.from_dict(item) for item in items],
+            end_cursor=payload.get("endCursor"),
+            has_next_page=bool(payload.get("hasNextPage")),
+        )
+
     async def search(
         self,
         *,

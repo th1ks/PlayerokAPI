@@ -53,7 +53,7 @@ class Service(str, Enum):
     """Сервис авторизации нового поколения, маршруты /auth/v1/..."""
 
     CATALOG = "catalog"
-    """Клиентский сервис каталога: items/top, items/official."""
+    """Клиентский сервис каталога: /v1/catalog/items/top и /official."""
 
 
 BASE_URLS: dict[Service, str] = {
