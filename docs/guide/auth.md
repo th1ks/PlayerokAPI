@@ -40,11 +40,6 @@ async with Account() as acc:
 `confirm_second_factor` принимает и результат целиком, и голый токен
 сессии из `result.second_factor_token`.
 
-:::{warning}
-Код на почту приходит владельцу адреса. Не вызывайте `send_otp` для
-чужих адресов.
-:::
-
 ## Выход
 
 ```python
