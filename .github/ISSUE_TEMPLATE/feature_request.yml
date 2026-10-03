@@ -1,0 +1,23 @@
+name: Предложение
+description: Новая возможность или метод API
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Какую задачу решаем
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Как это должно выглядеть
+      description: Желаемый интерфейс со стороны пользователя библиотеки.
+      render: python
+
+  - type: input
+    id: endpoint
+    attributes:
+      label: Ручка API
+      description: Метод и путь, если известны. Например — POST /rest-api/public/deals/create
