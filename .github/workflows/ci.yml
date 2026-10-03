@@ -3,8 +3,9 @@ name: CI
 on:
   push:
     branches: [main, develop]
+  # Без фильтра по базовой ветке: фичи вливаются стеком,
+  # и промежуточные пулл-реквесты тоже должны проверяться.
   pull_request:
-    branches: [main, develop]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
