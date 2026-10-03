@@ -102,9 +102,8 @@ class WebSocketTransport:
             },
         )
         self._subs[sub.id] = sub
-        await self._send({"id": sub.id, "type": "subscribe", "payload": sub.payload})
-
         try:
+            await self._send({"id": sub.id, "type": "subscribe", "payload": sub.payload})
             while True:
                 item = await sub.queue.get()
                 if item is None:
