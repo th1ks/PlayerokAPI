@@ -42,13 +42,12 @@ dev = [
 Homepage = "https://github.com/th1ks/PlayerokAPI"
 Repository = "https://github.com/th1ks/PlayerokAPI"
 Issues = "https://github.com/th1ks/PlayerokAPI/issues"
-Changelog = "https://github.com/th1ks/PlayerokAPI/blob/main/CHANGELOG.md"
 
 [tool.hatch.build.targets.wheel]
 packages = ["PlayerokAPI"]
 
 [tool.hatch.build.targets.sdist]
-include = ["PlayerokAPI", "README.md", "LICENSE", "CHANGELOG.md"]
+include = ["PlayerokAPI", "README.md", "LICENSE"]
 
 [tool.ruff]
 line-length = 100
