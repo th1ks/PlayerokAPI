@@ -6,9 +6,9 @@ import httpx
 import pytest
 import respx
 
-from PlayerokAPI import Account, ItemStatus
+from PlayerokAPI import Account, ItemPriority, ItemStatus
 from PlayerokAPI.common.endpoints import BASE_URLS, GRAPHQL_URL, Service
-from PlayerokAPI.exceptions import AuthRequiredError
+from PlayerokAPI.exceptions import AuthRequiredError, PlayerokError
 from PlayerokAPI.transport import Upload
 
 
@@ -232,3 +232,103 @@ async def test_item_mutations_require_token() -> None:
     async with Account() as account:
         with pytest.raises(AuthRequiredError):
             await account.items.publish("i1", priority_statuses=[], transaction_provider_id="LOCAL")
+
+
+# --- тарифы публикации ---------------------------------------------------
+
+
+def _statuses_response() -> httpx.Response:
+    return httpx.Response(
+        200,
+        json={
+            "data": {
+                "itemPriorityStatuses": [
+                    {
+                        "id": "prem-1",
+                        "name": "Премиум",
+                        "type": "PREMIUM",
+                        "price": 49,
+                        "period": 30,
+                        "priceRange": {"min": 1000, "max": 2500},
+                    },
+                    {"id": "def-1", "name": "Обычный", "type": "DEFAULT", "price": 0, "period": 30},
+                ]
+            }
+        },
+    )
+
+
+@respx.mock
+async def test_priority_statuses() -> None:
+    route = respx.post(GRAPHQL_URL).mock(return_value=_statuses_response())
+    async with Account(token="tok") as account:
+        statuses = await account.items.priority_statuses(1000)
+
+    assert [s.type for s in statuses] == [ItemPriority.PREMIUM, ItemPriority.DEFAULT]
+    assert statuses[0].price == 49
+    assert statuses[0].is_free is False
+    assert statuses[1].is_free is True
+    assert json.loads(route.calls.last.request.content)["variables"] == {"price": 1000}
+
+
+async def test_priority_statuses_rejects_negative_price() -> None:
+    async with Account(token="tok") as account:
+        with pytest.raises(ValueError):
+            await account.items.priority_statuses(-1)
+
+
+@respx.mock
+async def test_publish_picks_free_tier_by_default() -> None:
+    route = respx.post(GRAPHQL_URL)
+    route.side_effect = [
+        httpx.Response(200, json={"data": {"item": {"id": "i1", "price": 1000}}}),
+        _statuses_response(),
+        httpx.Response(200, json={"data": {"publishItem": {"id": "i1", "status": "APPROVED"}}}),
+    ]
+
+    async with Account(token="tok") as account:
+        item = await account.items.publish("i1")
+
+    assert item.id == "i1"
+    published = json.loads(route.calls[2].request.content)["variables"]["input"]
+    assert published["priorityStatuses"] == ["def-1"]
+    assert published["transactionProviderId"] == "LOCAL"
+
+
+@respx.mock
+async def test_publish_with_explicit_paid_tier_skips_lookup() -> None:
+    route = respx.post(GRAPHQL_URL).mock(
+        return_value=httpx.Response(200, json={"data": {"publishItem": {"id": "i1"}}})
+    )
+
+    async with Account(token="tok") as account:
+        await account.items.publish(
+            "i1", priority_statuses=["prem-1"], transaction_provider_id="SBP"
+        )
+
+    assert route.call_count == 1
+    published = json.loads(route.calls.last.request.content)["variables"]["input"]
+    assert published["priorityStatuses"] == ["prem-1"]
+    assert published["transactionProviderId"] == "SBP"
+
+
+@respx.mock
+async def test_publish_without_free_tier_raises() -> None:
+    route = respx.post(GRAPHQL_URL)
+    route.side_effect = [
+        httpx.Response(200, json={"data": {"item": {"id": "i1", "price": 1000}}}),
+        httpx.Response(
+            200,
+            json={
+                "data": {
+                    "itemPriorityStatuses": [
+                        {"id": "prem-1", "type": "PREMIUM", "price": 49},
+                    ]
+                }
+            },
+        ),
+    ]
+
+    async with Account(token="tok") as account:
+        with pytest.raises(PlayerokError):
+            await account.items.publish("i1")

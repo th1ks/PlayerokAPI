@@ -7,16 +7,27 @@ from typing import Any
 
 from ..common.endpoints import Service
 from ..common.utils import drop_none
-from ..enums import ItemStatus
+from ..enums import ItemPriority, ItemStatus
 from ..exceptions import PlayerokError
 from ..transport import GraphQLTransport, RestTransport, Upload
-from ..types import Item, ItemProfile, Page
+from ..types import Item, ItemPriorityStatus, ItemProfile, Page
 from . import fields
 
 __all__ = ["ItemsMethods"]
 
 _PROFILE_FIELDS = fields.ITEM_PROFILE
 _ITEM_FIELDS = fields.ITEM
+
+# priceForIncrease и feeMultiplier у части тарифов приходят пустыми и валятся
+# на non-null в схеме сервера, поэтому их не запрашиваем.
+_PRIORITY_STATUSES = """
+query ItemPriorityStatuses($itemId: UUID, $price: NonNegativeFloat!) {
+    itemPriorityStatuses(itemId: $itemId, price: $price) {
+        id name type price period boosterType
+        priceRange { min max }
+    }
+}
+"""
 
 _SEARCH = f"""
 query Items($filter: ItemFilter, $pagination: Pagination, $sort: Sort) {{
@@ -237,24 +248,69 @@ class ItemsMethods:
         )
         return Item.from_dict(_object(data, "updateItem"))
 
+    async def priority_statuses(
+        self,
+        price: float,
+        *,
+        item_id: str | None = None,
+    ) -> list[ItemPriorityStatus]:
+        """Тарифы публикации для товара такой цены.
+
+        Цена тарифа зависит от цены товара, поэтому она обязательна.
+        У обычного тарифа (`DEFAULT`) цена нулевая — публикация бесплатна.
+        """
+        if price < 0:
+            raise ValueError("price не может быть отрицательным")
+        data = await self._graphql.execute(
+            _PRIORITY_STATUSES,
+            drop_none({"itemId": item_id, "price": price}),
+            operation_name="ItemPriorityStatuses",
+            auth=True,
+        )
+        statuses = data.get("itemPriorityStatuses")
+        if not isinstance(statuses, list):
+            raise PlayerokError("Пустой или неожиданный ответ itemPriorityStatuses")
+        return [ItemPriorityStatus.from_dict(item) for item in statuses if isinstance(item, dict)]
+
     async def publish(
         self,
         item_id: str,
         *,
-        priority_statuses: Sequence[str],
-        transaction_provider_id: str,
+        priority_statuses: Sequence[str] | None = None,
+        transaction_provider_id: str = "LOCAL",
         options: Mapping[str, Any] | None = None,
     ) -> Item:
-        """Опубликовать товар с выбранным приоритетом и способом оплаты."""
+        """Опубликовать товар.
+
+        Без `priority_statuses` берётся бесплатный обычный тариф: библиотека
+        сама подтянет цену товара и найдёт `DEFAULT`. Платный тариф задаётся
+        явно — идентификаторы отдаёт `priority_statuses()`.
+
+        `transaction_provider_id` сервер требует всегда, даже на бесплатном
+        тарифе, поэтому по умолчанию стоит оплата с баланса.
+        """
+        statuses = (
+            list(priority_statuses)
+            if priority_statuses is not None
+            else [await self._free_priority_status(item_id)]
+        )
         return await self._publish_operation(
             _PUBLISH,
             "PublishItem",
             "publishItem",
             item_id,
-            priority_statuses,
+            statuses,
             transaction_provider_id,
             options,
         )
+
+    async def _free_priority_status(self, item_id: str) -> str:
+        """Идентификатор бесплатного тарифа для конкретного товара."""
+        item = await self.get(item_id=item_id)
+        for status in await self.priority_statuses(item.price, item_id=item_id):
+            if status.type is ItemPriority.DEFAULT:
+                return status.id
+        raise PlayerokError("Площадка не предложила бесплатный тариф публикации")
 
     async def promote(
         self,
