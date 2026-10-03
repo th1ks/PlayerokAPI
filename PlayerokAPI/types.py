@@ -300,6 +300,7 @@ class Game:
     items_counter: float = 0.0
     seller_fee: float | None = None
     tags: list[str] = field(default_factory=list)
+    categories: list[GameCategory] = field(default_factory=list)
     is_new: bool = False
     created_at: datetime | None = None
     raw: dict[str, Any] = field(default_factory=dict, repr=False, compare=False)
@@ -320,6 +321,7 @@ class Game:
             items_counter=to_float(data.get("itemsCounter"), 0.0) or 0.0,
             seller_fee=to_float(data.get("sellerFee")),
             tags=list(data.get("tags") or []),
+            categories=_list(GameCategory, data.get("categories")),
             is_new=bool(data.get("isNew")),
             created_at=parse_datetime(data.get("createdAt")),
             raw=data,
