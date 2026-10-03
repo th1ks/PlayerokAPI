@@ -86,13 +86,6 @@ await acc.steam.currency_rate("KZT", "RUB")
 await acc.steam.create_deposit("SBP", 500, account="steam_login")
 ```
 
-:::{note}
-Ручки Steam, `/deals/create`, `/chats/uncensor-message` и
-`/funds-protection/send-email-code` принимают только
-`multipart/form-data` и отвечают `415` на JSON. Библиотека это
-учитывает — ничего настраивать не нужно.
-:::
-
 ## Защита средств
 
 Если включена, площадка требует код с почты на операции, которые тратят
