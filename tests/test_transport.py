@@ -214,3 +214,24 @@ async def test_graphql_upload_is_multipart(http: HttpTransport) -> None:
     assert b'name="operations"' in body
     assert b'name="map"' in body
     assert b"png-bytes" in body
+
+
+@respx.mock
+async def test_multipart_form_is_sent_for_415_endpoints(http: HttpTransport) -> None:
+    route = respx.post(f"{PUBLIC}/deals/create").mock(
+        return_value=httpx.Response(200, json={"id": "d1"})
+    )
+    rest = RestTransport(http)
+
+    await rest.post(
+        Service.PUBLIC,
+        "/deals/create",
+        form={"itemId": "i1", "transactionProviderId": "LOCAL", "skip": None},
+    )
+
+    request = route.calls.last.request
+    assert request.headers["content-type"].startswith("multipart/form-data; boundary=")
+    body = request.content
+    assert b'name="itemId"' in body
+    assert b"i1" in body
+    assert b'name="skip"' not in body
