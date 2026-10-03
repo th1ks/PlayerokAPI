@@ -8,12 +8,19 @@ from PlayerokAPI.common.endpoints import BASE_URLS, GRAPHQL_URL, Service
 from PlayerokAPI.exceptions import (
     AuthRequiredError,
     GraphQLError,
+    NetworkError,
     NotFoundError,
     RateLimitError,
     ServerError,
     UnauthorizedError,
 )
-from PlayerokAPI.transport import GraphQLTransport, HttpTransport, RestTransport, Upload
+from PlayerokAPI.transport import (
+    GraphQLTransport,
+    HttpTransport,
+    RestTransport,
+    Upload,
+    WebSocketTransport,
+)
 
 PUBLIC = BASE_URLS[Service.PUBLIC]
 BFF = BASE_URLS[Service.BFF]
@@ -134,6 +141,35 @@ async def test_5xx_on_post_is_not_retried(http: HttpTransport) -> None:
     with pytest.raises(ServerError):
         await rest.post(Service.PUBLIC, "/deals/create", json={})
     assert route.call_count == 1
+
+
+@respx.mock
+async def test_network_failure_on_post_is_not_retried(http: HttpTransport) -> None:
+    route = respx.post(GRAPHQL_URL).mock(side_effect=httpx.ReadError("response lost"))
+
+    with pytest.raises(NetworkError):
+        await http.request("POST", GRAPHQL_URL, json={"query": "mutation { x }"})
+    assert route.call_count == 1
+
+
+async def test_failed_websocket_subscribe_cleans_up(
+    http: HttpTransport, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    ws = WebSocketTransport(http)
+
+    async def connected() -> None:
+        pass
+
+    async def failed_send(_message: dict[str, object]) -> None:
+        raise OSError("send failed")
+
+    monkeypatch.setattr(ws, "_ensure_connected", connected)
+    monkeypatch.setattr(ws, "_send", failed_send)
+
+    with pytest.raises(OSError):
+        await anext(ws.subscribe("subscription { x }"))
+    assert not ws._subs
+    await ws.close()
 
 
 async def test_auth_required_without_token() -> None:
