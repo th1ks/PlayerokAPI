@@ -11,7 +11,7 @@
 
 `PlayerokAPI` — клиент к Playerok по образцу `FunPayAPI`: пакет-папка, который можно и
 положить рядом с ботом или установить из исходников. Сейчас готовы транспорты,
-типизированные модели, вход по OTP, профиль, игры и товары. Чаты, сделки и слушатель
+типизированные модели, вход по OTP, профиль, игры, товары и чаты. Сделки и слушатель
 событий в разработке.
 
 Площадка использует REST, GraphQL и WebSocket; библиотека поддерживает все три:
@@ -80,6 +80,31 @@ asyncio.run(main())
 `acc.items.create`, `update`, `publish`, `promote`, `discontinue` и `republish`
 требуют токен. Поля для создания товара зависят от категории и передаются через `fields`.
 
+## Чаты
+
+```python
+import asyncio
+from PlayerokAPI import Account
+
+
+async def main() -> None:
+    async with Account(token="ваш_token_из_cookie") as acc:
+        chats = await acc.chats.search(first=20)
+        if not chats.items:
+            return
+        chat = chats.items[0]
+        messages = await acc.chats.messages(chat.id, limit=30)
+        print([message.text for message in messages])
+        await acc.chats.send(chat.id, "Привет!")
+        await acc.chats.mark_read(chat.id)
+
+
+asyncio.run(main())
+```
+
+Для отправки картинки передайте `images=[Upload(...)]` в `acc.chats.send()`.
+Метод загрузит её во временное хранилище и отправит полученный ID вместе с сообщением.
+
 ## Где взять токен
 
 DevTools → Application → Cookies → `https://playerok.com` → значение cookie `token`.
@@ -117,7 +142,7 @@ PlayerokAPI/
 ├── exceptions.py     иерархия ошибок
 ├── common/           конфигурация, эндпоинты, утилиты
 ├── transport/        HTTP, REST, GraphQL, WebSocket
-└── methods/          модули API: auth, viewer, games, items
+└── methods/          модули API: auth, viewer, games, items, chats
 ```
 
 ## Разработка
