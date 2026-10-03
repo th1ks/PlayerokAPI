@@ -71,9 +71,7 @@ class DealsMethods:
 
     async def get(self, deal_id: str) -> Deal:
         """Получить сделку по идентификатору."""
-        data = await self._graphql.execute(
-            _GET, {"id": deal_id}, operation_name="Deal", auth=True
-        )
+        data = await self._graphql.execute(_GET, {"id": deal_id}, operation_name="Deal", auth=True)
         return Deal.from_dict(_object(data, "deal"))
 
     async def create(
