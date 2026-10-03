@@ -267,3 +267,19 @@ async def test_polling_requires_token() -> None:
 def test_polling_validates_interval(acc: Account) -> None:
     with pytest.raises(ValueError):
         PollingRunner(acc, interval=0)
+
+
+async def test_listener_reports_startup(acc: Account, caplog) -> None:  # type: ignore[no-untyped-def]
+    """Молчание слушателя должно быть отличимо от поломки."""
+    acc.ws = FakeWebSocket({})  # type: ignore[assignment]
+    listener = Listener(acc, events=[EventType.NEW_MESSAGE], resolve_url=False)
+
+    with caplog.at_level("INFO", logger="PlayerokAPI.listener"):
+        task = asyncio.create_task(listener.run())
+        await asyncio.sleep(0.05)
+        await listener.stop()
+        task.cancel()
+        await asyncio.gather(task, return_exceptions=True)
+
+    assert "chatMessageCreated" in caplog.text
+    assert "1 подписку" in caplog.text
