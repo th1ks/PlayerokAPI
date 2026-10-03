@@ -9,15 +9,12 @@ from ..common.utils import drop_none
 from ..exceptions import PlayerokError
 from ..transport import GraphQLTransport
 from ..types import Page, Transaction
+from . import fields
 
 __all__ = ["TransactionsMethods"]
 
-_FIELDS = """
-    id operation direction providerId status statusDescription
-    statusExpirationDate value fee createdAt completedAt isSuspicious
-    user { id username avatarURL }
-"""
-_PAGE_INFO = "startCursor endCursor hasNextPage hasPreviousPage"
+_FIELDS = fields.TRANSACTION
+_PAGE_INFO = fields.PAGE_INFO
 _SEARCH = f"""
 query Transactions($pagination: Pagination, $filter: TransactionFilter!, $sort: Sort) {{
     transactions(pagination: $pagination, filter: $filter, sort: $sort) {{

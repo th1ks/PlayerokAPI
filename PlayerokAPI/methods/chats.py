@@ -10,28 +10,13 @@ from ..common.utils import drop_none
 from ..exceptions import PlayerokError
 from ..transport import GraphQLTransport, Upload
 from ..types import Chat, ChatMessage, File, Page
+from . import fields
 
 __all__ = ["ChatsMethods"]
 
-_USER_FIELDS = "id username avatarURL role isOnline"
-_MESSAGE_FIELDS = f"""
-    id text createdAt deletedAt isRead isEdited isSuspicious
-    isBulkMessaging isAutoResponse event imageLinks plTokenAmount
-    file {{ id url }} images {{ id url }}
-    user {{ {_USER_FIELDS} }}
-    eventByUser {{ id username }} eventToUser {{ id username }}
-    buttons {{ text type url }}
-    deal {{ id status direction hasProblem }}
-"""
-_CHAT_FIELDS = f"""
-    id type status unreadMessagesCounter bookmarked isTextingAllowed
-    startedAt finishedAt
-    lastMessage {{ id text createdAt isRead event user {{ id username }} }}
-    participants {{ {_USER_FIELDS} }}
-    owner {{ {_USER_FIELDS} }} agent {{ {_USER_FIELDS} }}
-    deals {{ id status direction hasProblem }}
-"""
-_PAGE_INFO = "startCursor endCursor hasNextPage hasPreviousPage"
+_MESSAGE_FIELDS = fields.MESSAGE
+_CHAT_FIELDS = fields.CHAT
+_PAGE_INFO = fields.PAGE_INFO
 
 _SEARCH = f"""
 query Chats($pagination: Pagination, $filter: ChatFilter) {{

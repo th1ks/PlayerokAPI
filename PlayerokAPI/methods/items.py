@@ -11,23 +11,12 @@ from ..enums import ItemStatus
 from ..exceptions import PlayerokError
 from ..transport import GraphQLTransport, RestTransport, Upload
 from ..types import Item, ItemProfile, Page
+from . import fields
 
 __all__ = ["ItemsMethods"]
 
-_PROFILE_FIELDS = """
-    __typename id slug name price rawPrice status priority
-    game { id slug name type }
-    category { id slug name }
-    user { id username avatarURL }
-    attachment { id url }
-"""
-_ITEM_FIELDS = """
-    __typename id slug name description price rawPrice status priority
-    game { id slug name type }
-    category { id slug name }
-    user { id username avatarURL }
-    attachments { id url }
-"""
+_PROFILE_FIELDS = fields.ITEM_PROFILE
+_ITEM_FIELDS = fields.ITEM
 
 _SEARCH = f"""
 query Items($filter: ItemFilter, $pagination: Pagination, $sort: Sort) {{

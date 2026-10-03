@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable, Mapping
+from typing import Any
+
 import httpx
 
 from .common.endpoints import DEFAULT_USER_AGENT
@@ -9,14 +12,21 @@ from .methods import (
     AuthMethods,
     ChatsMethods,
     DealsMethods,
+    FilesMethods,
+    FragmentMethods,
     GamesMethods,
     ItemsMethods,
+    LotteryMethods,
+    MiscMethods,
+    PlTokensMethods,
+    SteamMethods,
     TestimonialsMethods,
     TransactionsMethods,
     ViewerMethods,
 )
 from .transport import GraphQLTransport, HttpTransport, RestTransport, WebSocketTransport
 from .types import User
+from .updater import EventType, Listener, PollingRunner
 
 __all__ = ["Account"]
 
@@ -55,6 +65,12 @@ class Account:
         self.deals = DealsMethods(self.graphql, self.rest)
         self.testimonials = TestimonialsMethods(self.graphql)
         self.transactions = TransactionsMethods(self.graphql)
+        self.files = FilesMethods(self.rest)
+        self.pl_tokens = PlTokensMethods(self.rest)
+        self.fragment = FragmentMethods(self.rest)
+        self.steam = SteamMethods(self.rest)
+        self.lottery = LotteryMethods(self.rest)
+        self.misc = MiscMethods(self.rest)
         self._me: User | None = None
         self._me_token: str | None = None
 
@@ -76,6 +92,19 @@ class Account:
         self._me = await self.viewer.get_me()
         self._me_token = self.token
         return self._me
+
+    def listener(
+        self,
+        *,
+        events: Iterable[EventType] | None = None,
+        filters: Mapping[EventType, Mapping[str, Any]] | None = None,
+    ) -> Listener:
+        """Слушатель событий на подписках WebSocket."""
+        return Listener(self, events=events, filters=filters)
+
+    def polling(self, *, interval: float = 5.0) -> PollingRunner:
+        """Запасной источник событий для окружений без WebSocket."""
+        return PollingRunner(self, interval=interval)
 
     async def aclose(self) -> None:
         await self.ws.close()
