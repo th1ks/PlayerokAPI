@@ -24,7 +24,8 @@
 | GraphQL `playerok.com/graphql` | товары, чаты, сообщения, сделки, отзывы, транзакции |
 | WebSocket `wss://ws.playerok.com/graphql` | события в реальном времени |
 
-Где у площадки есть REST — библиотека идёт в REST.
+Где у площадки есть REST — библиотека идёт в REST. Админские и внутренние ручки
+сознательно не реализованы: только то, чем пользуется обычный клиент.
 
 ## Установка
 
@@ -102,19 +103,39 @@ async for event in acc.polling(interval=5.0).events():
 | Неймспейс | Что внутри |
 |---|---|
 | `acc.auth` | вход по коду на почту, второй фактор, выход |
-| `acc.viewer` | профиль, баланс, аватар, проверка и регистрация ника |
+| `acc.viewer` | профиль, баланс, аватар, настройки, двухфакторная аутентификация |
 | `acc.games` | игры, категории |
 | `acc.items` | поиск, топ, официальный магазин, создание, публикация, продвижение |
 | `acc.chats` | чаты, сообщения, картинки, отметка о прочтении |
-| `acc.deals` | сделки, покупка, смена статуса |
+| `acc.deals` | сделки, покупка, смена статуса, жалоба на проблему |
 | `acc.testimonials` | отзывы |
-| `acc.transactions` | транзакции, вывод средств |
+| `acc.transactions` | история транзакций, вывод средств |
+| `acc.payments` | пополнение баланса, провайдеры, способы оплаты, карты |
+| `acc.notifications` | каналы уведомлений, привязка Telegram-бота |
 | `acc.files` | загрузка файлов в хранилище |
 | `acc.pl_tokens` | баланс, история, кэшбэк, промокоды |
 | `acc.fragment` | покупка Telegram Stars |
 | `acc.steam` | пополнение кошелька Steam |
 | `acc.lottery` | розыгрыши и билеты |
 | `acc.misc` | гео, баннеры, feature-флаги, код защиты средств |
+
+## Пополнение баланса
+
+```python
+providers = await acc.payments.providers()
+for provider in providers:
+    print(provider.id, provider.name, provider.fee, provider.incoming)
+
+url = await acc.payments.create_payment_url(
+    1000,
+    "SBP",
+    payment_method="RUB",
+    email="mail@example.com",
+)
+print(url)  # платёжная страница провайдера
+```
+
+Результат придёт событием `NEW_TRANSACTION`.
 
 ## Где взять токен
 

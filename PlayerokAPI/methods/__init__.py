@@ -9,6 +9,8 @@ from .games import GamesMethods
 from .items import ItemsMethods
 from .lottery import LotteryMethods
 from .misc import MiscMethods
+from .notifications import NotificationsMethods
+from .payments import PaymentsMethods
 from .steam import SteamMethods
 from .testimonials import TestimonialsMethods
 from .tokens import PlTokensMethods
@@ -25,7 +27,9 @@ __all__ = [
     "ItemsMethods",
     "LotteryMethods",
     "MiscMethods",
+    "NotificationsMethods",
     "OtpResult",
+    "PaymentsMethods",
     "PlTokensMethods",
     "SteamMethods",
     "TestimonialsMethods",

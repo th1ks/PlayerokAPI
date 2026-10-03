@@ -73,14 +73,17 @@ class TransactionsMethods:
         account: str,
         *,
         confirmation_code: str | None = None,
-        fields: Mapping[str, Any] | None = None,
+        extra: Mapping[str, Any] | None = None,
     ) -> Transaction:
-        """Запросить вывод; дополнительные поля — `CreateWithdrawalTransactionInput`."""
+        """Запросить вывод.
+
+        Остальные поля `CreateWithdrawalTransactionInput` передаются через `extra`.
+        """
         if value <= 0:
             raise ValueError("value должен быть положительным")
         if not provider or not account:
             raise ValueError("Нужны provider и account")
-        body = dict(fields or {})
+        body = dict(extra or {})
         body.update(
             drop_none(
                 {
