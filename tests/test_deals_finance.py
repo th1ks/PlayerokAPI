@@ -38,9 +38,9 @@ async def test_deals_list_get_and_update() -> None:
         assert (await account.deals.update("d1", {"status": "DONE"})).id == "d1"
 
     listed = json.loads(route.calls[0].request.content)
+    # sort не задан — переменная не отправляется вовсе, а не уходит как null
     assert listed["variables"] == {
         "filter": {"userId": "u1"},
-        "sort": None,
         "pagination": {"first": 1, "after": "prev"},
     }
     updated = json.loads(route.calls[2].request.content)

@@ -8,6 +8,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from ..common.endpoints import GRAPHQL_URL
+from ..common.utils import drop_none
 from ..exceptions import AuthRequiredError, GraphQLError
 from .http import HttpTransport
 
@@ -71,7 +72,9 @@ class GraphQLTransport:
         if auth and not self._http.token:
             raise AuthRequiredError(operation_name or "graphql")
 
-        operation = _Operation(query, dict(variables or {}), operation_name)
+        # Незаданная переменная должна отсутствовать, а не приходить как null:
+        # резолверы площадки разыменовывают аргументы без проверки и падают на null.
+        operation = _Operation(query, drop_none(variables or {}), operation_name)
         headers = {
             "apollo-require-preflight": "true",
             "x-gql-op": operation_name or "anonymous",
