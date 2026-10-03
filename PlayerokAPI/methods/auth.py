@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from ..common.endpoints import TOKEN_COOKIE, Service
+from ..common.utils import unwrap_envelope
 from ..exceptions import PlayerokError, TokenError
 from ..transport.rest import RestTransport
 
@@ -32,10 +33,9 @@ class AuthMethods:
 
     async def confirm_otp(self, email: str, code: str) -> OtpResult:
         """Подтвердить код и сохранить токен либо вернуть сессию 2FA."""
-        payload = await self._rest.post(
-            Service.PUBLIC,
+        payload, cookie_token = await self._post_for_token(
             "/auth/confirm-otp",
-            json={"email": email, "otpCode": code},
+            {"email": email, "otpCode": code},
         )
         if not isinstance(payload, dict):
             raise PlayerokError("Неожиданный ответ подтверждения OTP")
@@ -44,40 +44,36 @@ class AuthMethods:
             if not isinstance(session, dict):
                 raise PlayerokError("Сервер не вернул сессию второго фактора")
             return OtpResult(requires_two_factor=True, second_factor_session=session, raw=payload)
-        token = self._save_token(payload)
+        token = self._save_token(payload, cookie_token)
         return OtpResult(token=token, raw=payload)
 
     async def confirm_second_factor(self, session_token: str, code: str) -> str:
         """Завершить вход по шестизначному коду 2FA."""
-        payload = await self._rest.post(
-            Service.PUBLIC,
+        payload, cookie_token = await self._post_for_token(
             "/auth/confirm-second-factor",
-            json={"token": session_token, "totpCode": code},
+            {"token": session_token, "totpCode": code},
         )
-        return self._save_token(payload)
+        return self._save_token(payload, cookie_token)
 
     async def logout(self) -> None:
         """Закрыть сессию на сервере и удалить локальный токен."""
         await self._rest.post(Service.BFF, "/auth/logout", auth=True)
         self._rest.http.token = None
 
-    def _save_token(self, payload: Any) -> str:
+    async def _post_for_token(self, path: str, body: dict[str, str]) -> tuple[Any, str | None]:
+        response = await self._rest.http.raw_request(
+            "POST", self._rest.url(Service.PUBLIC, path), json=body
+        )
+        try:
+            payload = response.json() if response.content else {}
+        except ValueError as exc:
+            raise PlayerokError("Неожиданный ответ авторизации") from exc
+        return unwrap_envelope(payload), response.cookies.get(TOKEN_COOKIE)
+
+    def _save_token(self, payload: Any, cookie_token: str | None) -> str:
         token = payload.get("token") if isinstance(payload, dict) else None
         if not isinstance(token, str) or not token:
-            candidates = [
-                cookie.value
-                for cookie in self._rest.http.client.cookies.jar
-                if cookie.name == TOKEN_COOKIE
-                and (
-                    cookie.domain.lstrip(".") == "playerok.com"
-                    or cookie.domain.lstrip(".").endswith(".playerok.com")
-                )
-            ]
-            token = next(
-                (candidate for candidate in candidates if candidate != self._rest.http.token), None
-            )
-            if not token and candidates:
-                token = candidates[-1]
+            token = cookie_token
         if not isinstance(token, str) or not token:
             raise TokenError("В ответе авторизации нет cookie token")
         self._rest.http.token = token

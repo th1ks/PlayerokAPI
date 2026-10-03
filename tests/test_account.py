@@ -3,10 +3,12 @@ from __future__ import annotations
 import json
 
 import httpx
+import pytest
 import respx
 
 from PlayerokAPI import Account
 from PlayerokAPI.common.endpoints import BASE_URLS, Service
+from PlayerokAPI.exceptions import TokenError
 
 PUBLIC = BASE_URLS[Service.PUBLIC]
 BFF = BASE_URLS[Service.BFF]
@@ -88,6 +90,31 @@ async def test_second_factor_uses_session_token_then_saves_cookie() -> None:
             "token": "pending-token",
             "totpCode": "654321",
         }
+
+
+@respx.mock
+async def test_otp_does_not_reuse_an_existing_token_without_new_credentials() -> None:
+    respx.post(f"{PUBLIC}/auth/confirm-otp").mock(
+        return_value=httpx.Response(200, json={"requiresTwoFactor": False})
+    )
+    async with Account(token="old-token") as account:
+        with pytest.raises(TokenError):
+            await account.auth.confirm_otp("alice@example.com", "123456")
+        assert account.token == "old-token"
+
+
+@respx.mock
+async def test_otp_accepts_token_reissued_in_response_cookie() -> None:
+    respx.post(f"{PUBLIC}/auth/confirm-otp").mock(
+        return_value=httpx.Response(
+            200,
+            json={"requiresTwoFactor": False},
+            headers={"set-cookie": "token=same-token; Path=/; HttpOnly"},
+        )
+    )
+    async with Account(token="same-token") as account:
+        result = await account.auth.confirm_otp("alice@example.com", "123456")
+        assert result.token == "same-token"
 
 
 @respx.mock
