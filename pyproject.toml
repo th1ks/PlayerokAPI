@@ -48,7 +48,8 @@ dev = [
 Homepage = "https://github.com/th1ks/PlayerokAPI"
 Repository = "https://github.com/th1ks/PlayerokAPI"
 Issues = "https://github.com/th1ks/PlayerokAPI/issues"
-Documentation = "https://playerokapi.readthedocs.io"
+Documentation = "https://playerok-api.readthedocs.io"
+Chat = "https://t.me/playerokapi"
 
 [tool.hatch.build.targets.wheel]
 packages = ["PlayerokAPI"]

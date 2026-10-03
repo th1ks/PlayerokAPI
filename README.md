@@ -3,10 +3,11 @@
 Лёгкая асинхронная библиотека для работы с API маркетплейса [Playerok](https://playerok.com).
 
 [![CI](https://github.com/th1ks/PlayerokAPI/actions/workflows/ci.yml/badge.svg)](https://github.com/th1ks/PlayerokAPI/actions/workflows/ci.yml)
-[![Docs](https://app.readthedocs.org/projects/playerokapi/badge/?version=latest)](https://playerokapi.readthedocs.io)
+[![Docs](https://app.readthedocs.org/projects/playerok-api/badge/?version=latest)](https://playerok-api.readthedocs.io)
 [![PyPI](https://img.shields.io/pypi/v/PlayerokAPI.svg)](https://pypi.org/project/PlayerokAPI/)
 [![Python](https://img.shields.io/pypi/pyversions/PlayerokAPI.svg)](https://pypi.org/project/PlayerokAPI/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Telegram](https://img.shields.io/badge/Telegram-чат-26A5E4?logo=telegram&logoColor=white)](https://t.me/playerokapi)
 
 > Неофициальная библиотека. Проект не связан с Playerok и не поддерживается площадкой.
 
@@ -175,7 +176,7 @@ except PlayerokError:
 
 ## Документация
 
-Полное руководство и справочник API — [playerokapi.readthedocs.io](https://playerokapi.readthedocs.io).
+Полное руководство и справочник API — [playerok-api.readthedocs.io](https://playerok-api.readthedocs.io).
 
 Собрать локально:
 
@@ -218,6 +219,11 @@ ruff check . && mypy PlayerokAPI && pytest
 
 Ветки: `main` — релизы, `develop` — интеграционная, фичи — `feat/*`, правки — `fix/*`.
 Пулл-реквесты идут в `develop`.
+
+## Где спросить
+
+Телеграм-чат библиотеки — [@playerokapi](https://t.me/playerokapi).
+Баги и предложения лучше в [issues](https://github.com/th1ks/PlayerokAPI/issues).
 
 ## Лицензия
 
